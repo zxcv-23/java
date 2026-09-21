@@ -7,12 +7,16 @@ const emit = defineEmits(['celebrate', 'switch'])
 // ---------- 表单状态 ----------
 const cardEl = ref(null)
 const userInput = ref(null)
+const emailInput = ref(null)
 const passInput = ref(null)
+const confirmInput = ref(null)
 
 const username = ref('')
+const email = ref('')
 const password = ref('')
+const confirm = ref('')
 const showPass = ref(false)
-const remember = ref(false)
+const agree = ref(false)
 
 const loading = ref(false)
 const success = ref(false)
@@ -42,9 +46,16 @@ function togglePass() {
 function onSubmit() {
   if (loading.value || success.value) return
   const u = username.value.trim()
-  const pw = password.value.trim()
-  if (!u) { showHint('夫君还不肯报名吗？'); userInput.value.focus(); return }
-  if (!pw) { showHint('没有暗语，如何与我结契～'); passInput.value.focus(); return }
+  const em = email.value.trim()
+  const pw = password.value
+  const cf = confirm.value
+
+  if (!u) { showHint('夫君还无名讳吗？'); userInput.value.focus(); return }
+  if (!em) { showHint('冥府信笺地址成谜了'); emailInput.value.focus(); return }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { showHint('这信笺地址…怕不是阎王笔误？'); emailInput.value.focus(); return }
+  if (pw.length < 6) { showHint('暗语至少六字，方镇得住花轿'); passInput.value.focus(); return }
+  if (pw !== cf) { showHint('两遍暗语不符，花娘起疑了'); confirmInput.value.focus(); return }
+  if (!agree.value) { showHint('需以魂魄为聘，方得结契'); return }
 
   hintShow.value = false
   loading.value = true
@@ -62,15 +73,15 @@ function onSubmit() {
     <GhostBride :happy="success" />
 
     <h1>鬼娘花嫁</h1>
-    <p class="sub">月 夜 婚 礼 · 请 君 入 瓮</p>
+    <p class="sub">月 夜 纳 新 · 录 入 生 契</p>
 
     <form novalidate @submit.prevent="onSubmit">
       <div class="field">
-        <label for="user">夫君名讳</label>
+        <label for="reg-user">夫君名讳</label>
         <div class="input-wrap">
           <span class="ico">💍</span>
           <input
-            id="user" ref="userInput" v-model="username" type="text"
+            id="reg-user" ref="userInput" v-model="username" type="text"
             placeholder="留下你的名字，与我结契" autocomplete="username"
             @input="hintShow = false"
           />
@@ -78,13 +89,41 @@ function onSubmit() {
       </div>
 
       <div class="field">
-        <label for="pass">结契暗语</label>
+        <label for="reg-email">冥府信笺</label>
+        <div class="input-wrap">
+          <span class="ico">✉️</span>
+          <input
+            id="reg-email" ref="emailInput" v-model="email" type="email"
+            placeholder="寄往幽冥的信箱地址" autocomplete="email"
+            @input="hintShow = false"
+          />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="reg-pass">结契暗语</label>
         <div class="input-wrap">
           <span class="ico">🕯️</span>
           <input
-            id="pass" ref="passInput" v-model="password"
+            id="reg-pass" ref="passInput" v-model="password"
             :type="showPass ? 'text' : 'password'"
-            placeholder="嘘…别让阎王听见" autocomplete="current-password"
+            placeholder="嘘…别让阎王听见（至少 6 字）" autocomplete="new-password"
+            @input="hintShow = false"
+          />
+          <button class="toggle" type="button" :aria-label="showPass ? '隐藏暗语' : '显示暗语'" @click="togglePass">
+            {{ showPass ? '🙈' : '👀' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="reg-confirm">重诵暗语</label>
+        <div class="input-wrap">
+          <span class="ico">🔒</span>
+          <input
+            id="reg-confirm" ref="confirmInput" v-model="confirm"
+            :type="showPass ? 'text' : 'password'"
+            placeholder="再诵一遍，以证真心" autocomplete="new-password"
             @input="hintShow = false"
           />
           <button class="toggle" type="button" :aria-label="showPass ? '隐藏暗语' : '显示暗语'" @click="togglePass">
@@ -95,15 +134,14 @@ function onSubmit() {
 
       <div class="row">
         <label class="remember">
-          <input v-model="remember" type="checkbox" />
+          <input v-model="agree" type="checkbox" />
           <span class="box"></span>
-          <span>来世也要记得我</span>
+          <span>愿以魂魄为聘，永世相随</span>
         </label>
-        <a class="link" href="#">暗语飘散在风里了</a>
       </div>
 
       <button class="btn" type="submit" :class="{ ok: success }" :disabled="loading || success">
-        {{ success ? '契约成立 ♥ 你的灵魂，归我了' : (loading ? '正在结契…' : '缔 结 婚 约') }}
+        {{ success ? '新生录入 ♥ 静候花轿' : (loading ? '正在录入…' : '录 入 新 生') }}
       </button>
       <p class="hint" :class="{ show: hintShow }">{{ hintMsg }}</p>
     </form>
@@ -115,12 +153,12 @@ function onSubmit() {
       <button class="social" type="button" title="玫瑰">🌹</button>
     </div>
 
-    <p class="foot">还未与我结契？<a class="link" href="#" @click.prevent="$emit('switch')">录入新生契约 →</a></p>
+    <p class="foot">已有契约在身？<a class="link" href="#" @click.prevent="$emit('switch')">返回缔结婚约 →</a></p>
   </main>
 </template>
 
 <style scoped>
-/* ---------- 卡片 ---------- */
+/* ---------- 卡片（与登录页一致） ---------- */
 .card{
   position:relative; z-index:5;
   width:min(440px,94vw);
@@ -163,7 +201,7 @@ form{ text-align:left; }
 }
 .input-wrap{ position:relative; }
 .input-wrap .ico{ position:absolute; left:15px; top:50%; transform:translateY(-50%); font-size:15px; opacity:.55; pointer-events:none; }
-input[type="text"], input[type="password"]{
+input[type="text"], input[type="email"], input[type="password"]{
   width:100%; padding:14px 46px 14px 42px; font-size:15px; color:var(--ink);
   background:#FFFDFE; border:2px solid var(--line); border-radius:15px; outline:none;
   transition:border-color .2s, box-shadow .2s; font-family:inherit;
@@ -214,5 +252,5 @@ a.link:hover{ color:#C93A66; }
 
 .foot{ margin:20px 0 0; font-size:12.5px; color:var(--ink-soft); }
 
-@media (max-width:420px){ .card{ padding:18px 20px 24px; border-radius:22px;} .mascot{ width:152px;} h1{ font-size:22px;} }
+@media (max-width:420px){ .card{ padding:18px 20px 24px; border-radius:22px;} h1{ font-size:22px;} }
 </style>

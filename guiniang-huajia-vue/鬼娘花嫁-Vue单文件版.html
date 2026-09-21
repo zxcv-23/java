@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>鬼娘花嫁 · 登录（Vue 3 单文件版）</title>
+<title>鬼娘花嫁 · 登录 / 注册（Vue 3 单文件版）</title>
 <style>
   :root{
     --bg1:#6A3A8E;
@@ -68,6 +68,24 @@
     100%{ transform:translate(-22px,-58px); opacity:.25; }
   }
 
+  /* ---------- 登录 / 注册 分段切换 ---------- */
+  .switch{
+    position:relative; z-index:5; display:flex; gap:4px; padding:5px; margin-bottom:14px;
+    background:rgba(255,247,251,.14); border:1px solid rgba(255,179,200,.4); border-radius:999px;
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  }
+  .switch button{
+    border:none; background:transparent; color:#FFE6F0; font-size:13.5px; letter-spacing:2px;
+    padding:9px 20px; border-radius:999px; cursor:pointer; transition:.2s; font-family:inherit;
+  }
+  .switch button.active{
+    background:linear-gradient(180deg,#FF8FB4,#E84A78); color:#fff;
+    box-shadow:0 4px 12px rgba(232,74,120,.5);
+  }
+  .swap-enter-active, .swap-leave-active{ transition:opacity .3s ease, transform .3s ease; }
+  .swap-enter-from{ opacity:0; transform:translateY(14px) scale(.98); }
+  .swap-leave-to{ opacity:0; transform:translateY(-14px) scale(.98); }
+
   /* ---------- 卡片 ---------- */
   .card{
     position:relative; z-index:5;
@@ -129,7 +147,7 @@
   }
   .input-wrap{ position:relative; }
   .input-wrap .ico{ position:absolute; left:15px; top:50%; transform:translateY(-50%); font-size:15px; opacity:.55; pointer-events:none; }
-  input[type="text"], input[type="password"]{
+  input[type="text"], input[type="email"], input[type="password"]{
     width:100%; padding:14px 46px 14px 42px; font-size:15px; color:var(--ink);
     background:#FFFDFE; border:2px solid var(--line); border-radius:15px; outline:none;
     transition:border-color .2s, box-shadow .2s; font-family:inherit;
@@ -207,59 +225,144 @@
       :style="{ left: f.left + '%', top: f.top + '%', animationDuration: f.dur + 's', animationDelay: f.delay + 's' }"></span>
   </div>
 
-  <main class="card" ref="cardEl" :class="{ shake: shaking }">
-    <ghost-bride :happy="success"></ghost-bride>
+  <!-- 登录 / 注册 分段切换 -->
+  <div class="switch" role="tablist">
+    <button type="button" :class="{ active: mode === 'login' }" @click="mode = 'login'">缔 结 婚 约</button>
+    <button type="button" :class="{ active: mode === 'register' }" @click="mode = 'register'">录 入 新 生</button>
+  </div>
 
-    <h1>鬼娘花嫁</h1>
-    <p class="sub">月 夜 婚 礼 · 请 君 入 瓮</p>
+  <transition name="swap" mode="out-in">
+    <!-- ============ 登录卡片 ============ -->
+    <main v-if="mode === 'login'" key="login" class="card" ref="loginCard" :class="{ shake: loginShaking }">
+      <ghost-bride :happy="loginSuccess"></ghost-bride>
 
-    <form novalidate @submit.prevent="onSubmit">
-      <div class="field">
-        <label for="user">夫君名讳</label>
-        <div class="input-wrap">
-          <span class="ico">💍</span>
-          <input id="user" ref="userInput" v-model="username" type="text"
-                 placeholder="留下你的名字，与我结契" autocomplete="username"
-                 @input="hintShow = false" />
+      <h1>鬼娘花嫁</h1>
+      <p class="sub">月 夜 婚 礼 · 请 君 入 瓮</p>
+
+      <form novalidate @submit.prevent="onLoginSubmit">
+        <div class="field">
+          <label for="user">夫君名讳</label>
+          <div class="input-wrap">
+            <span class="ico">💍</span>
+            <input id="user" ref="loginUser" v-model="username" type="text"
+                   placeholder="留下你的名字，与我结契" autocomplete="username"
+                   @input="loginHintShow = false" />
+          </div>
         </div>
-      </div>
 
-      <div class="field">
-        <label for="pass">结契暗语</label>
-        <div class="input-wrap">
-          <span class="ico">🕯️</span>
-          <input id="pass" ref="passInput" v-model="password"
-                 :type="showPass ? 'text' : 'password'"
-                 placeholder="嘘…别让阎王听见" autocomplete="current-password"
-                 @input="hintShow = false" />
-          <button class="toggle" type="button" :aria-label="showPass ? '隐藏暗语' : '显示暗语'" @click="togglePass">{{ showPass ? '🙈' : '👀' }}</button>
+        <div class="field">
+          <label for="pass">结契暗语</label>
+          <div class="input-wrap">
+            <span class="ico">🕯️</span>
+            <input id="pass" ref="loginPass" v-model="password"
+                   :type="showPass ? 'text' : 'password'"
+                   placeholder="嘘…别让阎王听见" autocomplete="current-password"
+                   @input="loginHintShow = false" />
+            <button class="toggle" type="button" :aria-label="showPass ? '隐藏暗语' : '显示暗语'" @click="loginToggle">{{ showPass ? '🙈' : '👀' }}</button>
+          </div>
         </div>
+
+        <div class="row">
+          <label class="remember">
+            <input v-model="remember" type="checkbox" />
+            <span class="box"></span>
+            <span>来世也要记得我</span>
+          </label>
+          <a class="link" href="#">暗语飘散在风里了</a>
+        </div>
+
+        <button class="btn" type="submit" :class="{ ok: loginSuccess }" :disabled="loginLoading || loginSuccess">
+          {{ loginSuccess ? '契约成立 ♥ 你的灵魂，归我了' : (loginLoading ? '正在结契…' : '缔 结 婚 约') }}
+        </button>
+        <p class="hint" :class="{ show: loginHintShow }">{{ loginHint }}</p>
+      </form>
+
+      <div class="divider">或借冥婚之媒</div>
+      <div class="socials">
+        <button class="social" type="button" title="彼岸">💀</button>
+        <button class="social" type="button" title="红烛">🕯️</button>
+        <button class="social" type="button" title="玫瑰">🌹</button>
       </div>
 
-      <div class="row">
-        <label class="remember">
-          <input v-model="remember" type="checkbox" />
-          <span class="box"></span>
-          <span>来世也要记得我</span>
-        </label>
-        <a class="link" href="#">暗语飘散在风里了</a>
+      <p class="foot">还未与我结契？<a class="link" href="#" @click.prevent="mode = 'register'">录入新生契约 →</a></p>
+    </main>
+
+    <!-- ============ 注册卡片 ============ -->
+    <main v-else key="register" class="card" ref="regCard" :class="{ shake: regShaking }">
+      <ghost-bride :happy="regSuccess"></ghost-bride>
+
+      <h1>鬼娘花嫁</h1>
+      <p class="sub">月 夜 纳 新 · 录 入 生 契</p>
+
+      <form novalidate @submit.prevent="onRegisterSubmit">
+        <div class="field">
+          <label for="reg-user">夫君名讳</label>
+          <div class="input-wrap">
+            <span class="ico">💍</span>
+            <input id="reg-user" ref="regUser" v-model="regName" type="text"
+                   placeholder="留下你的名字，与我结契" autocomplete="username"
+                   @input="regHintShow = false" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="reg-email">冥府信笺</label>
+          <div class="input-wrap">
+            <span class="ico">✉️</span>
+            <input id="reg-email" ref="regEmailInput" v-model="regEmail" type="email"
+                   placeholder="寄往幽冥的信箱地址" autocomplete="email"
+                   @input="regHintShow = false" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="reg-pass">结契暗语</label>
+          <div class="input-wrap">
+            <span class="ico">🕯️</span>
+            <input id="reg-pass" ref="regPass" v-model="regPassword"
+                   :type="showPass ? 'text' : 'password'"
+                   placeholder="嘘…别让阎王听见（至少 6 字）" autocomplete="new-password"
+                   @input="regHintShow = false" />
+            <button class="toggle" type="button" :aria-label="showPass ? '隐藏暗语' : '显示暗语'" @click="regToggle">{{ showPass ? '🙈' : '👀' }}</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="reg-confirm">重诵暗语</label>
+          <div class="input-wrap">
+            <span class="ico">🔒</span>
+            <input id="reg-confirm" ref="regConfirmInput" v-model="regConfirm"
+                   :type="showPass ? 'text' : 'password'"
+                   placeholder="再诵一遍，以证真心" autocomplete="new-password"
+                   @input="regHintShow = false" />
+            <button class="toggle" type="button" :aria-label="showPass ? '隐藏暗语' : '显示暗语'" @click="regToggle">{{ showPass ? '🙈' : '👀' }}</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label class="remember">
+            <input v-model="regAgree" type="checkbox" />
+            <span class="box"></span>
+            <span>愿以魂魄为聘，永世相随</span>
+          </label>
+        </div>
+
+        <button class="btn" type="submit" :class="{ ok: regSuccess }" :disabled="regLoading || regSuccess">
+          {{ regSuccess ? '新生录入 ♥ 静候花轿' : (regLoading ? '正在录入…' : '录 入 新 生') }}
+        </button>
+        <p class="hint" :class="{ show: regHintShow }">{{ regHint }}</p>
+      </form>
+
+      <div class="divider">或借冥婚之媒</div>
+      <div class="socials">
+        <button class="social" type="button" title="彼岸">💀</button>
+        <button class="social" type="button" title="红烛">🕯️</button>
+        <button class="social" type="button" title="玫瑰">🌹</button>
       </div>
 
-      <button class="btn" type="submit" :class="{ ok: success }" :disabled="loading || success">
-        {{ success ? '契约成立 ♥ 你的灵魂，归我了' : (loading ? '正在结契…' : '缔 结 婚 约') }}
-      </button>
-      <p class="hint" :class="{ show: hintShow }">{{ hintMsg }}</p>
-    </form>
-
-    <div class="divider">或借冥婚之媒</div>
-    <div class="socials">
-      <button class="social" type="button" title="彼岸">💀</button>
-      <button class="social" type="button" title="红烛">🕯️</button>
-      <button class="social" type="button" title="玫瑰">🌹</button>
-    </div>
-
-    <p class="foot">还未被选中？<a class="link" href="#">那便再等一等吧</a></p>
-  </main>
+      <p class="foot">已有契约在身？<a class="link" href="#" @click.prevent="mode = 'login'">返回缔结婚约 →</a></p>
+    </main>
+  </transition>
 
   <!-- 爱心雨图层 -->
   <div class="hearts" aria-hidden="true">
@@ -397,43 +500,83 @@ createApp({
       return { left: rand(0, 100), top: rand(8, 93), dur: rand(5, 11), delay: -rand(0, 8) };
     });
 
-    /* ---------- 表单状态 ---------- */
-    const cardEl = ref(null);
-    const userInput = ref(null);
-    const passInput = ref(null);
+    /* ---------- 登录 / 注册 切换 ---------- */
+    const mode = ref('login');
+    const showPass = ref(false);
+
+    /* ---------- 登录表单 ---------- */
+    const loginCard = ref(null);
+    const loginUser = ref(null);
+    const loginPass = ref(null);
     const username = ref('');
     const password = ref('');
-    const showPass = ref(false);
     const remember = ref(false);
-    const loading = ref(false);
-    const success = ref(false);
-    const hintMsg = ref('');
-    const hintShow = ref(false);
-    const shaking = ref(false);
+    const loginLoading = ref(false);
+    const loginSuccess = ref(false);
+    const loginHint = ref('');
+    const loginHintShow = ref(false);
+    const loginShaking = ref(false);
 
-    function retriggerShake() {
-      shaking.value = false;
-      nextTick(function () {
-        if (cardEl.value) void cardEl.value.offsetWidth;
-        shaking.value = true;
-      });
+    function loginShake() {
+      loginShaking.value = false;
+      nextTick(function () { if (loginCard.value) void loginCard.value.offsetWidth; loginShaking.value = true; });
     }
-    function showHint(msg) { hintMsg.value = msg; hintShow.value = true; retriggerShake(); }
-    function togglePass() { showPass.value = !showPass.value; if (passInput.value) passInput.value.focus(); }
+    function loginShowHint(msg) { loginHint.value = msg; loginHintShow.value = true; loginShake(); }
+    function loginToggle() { showPass.value = !showPass.value; if (loginPass.value) loginPass.value.focus(); }
 
-    function onSubmit() {
-      if (loading.value || success.value) return;
-      var u = username.value.trim();
-      var pw = password.value.trim();
-      if (!u) { showHint('夫君还不肯报名吗？'); userInput.value.focus(); return; }
-      if (!pw) { showHint('没有暗语，如何与我结契～'); passInput.value.focus(); return; }
-
-      hintShow.value = false;
-      loading.value = true;
+    function onLoginSubmit() {
+      if (loginLoading.value || loginSuccess.value) return;
+      var u = username.value.trim(), pw = password.value.trim();
+      if (!u) { loginShowHint('夫君还不肯报名吗？'); loginUser.value.focus(); return; }
+      if (!pw) { loginShowHint('没有暗语，如何与我结契～'); loginPass.value.focus(); return; }
+      loginHintShow.value = false;
+      loginLoading.value = true;
       setTimeout(function () {
-        loading.value = false;
-        success.value = true;
-        rainHearts(cardEl.value.getBoundingClientRect());
+        loginLoading.value = false;
+        loginSuccess.value = true;
+        rainHearts(loginCard.value.getBoundingClientRect());
+      }, 950);
+    }
+
+    /* ---------- 注册表单 ---------- */
+    const regCard = ref(null);
+    const regUser = ref(null);
+    const regEmailInput = ref(null);
+    const regPass = ref(null);
+    const regConfirmInput = ref(null);
+    const regName = ref('');
+    const regEmail = ref('');
+    const regPassword = ref('');
+    const regConfirm = ref('');
+    const regAgree = ref(false);
+    const regLoading = ref(false);
+    const regSuccess = ref(false);
+    const regHint = ref('');
+    const regHintShow = ref(false);
+    const regShaking = ref(false);
+
+    function regShake() {
+      regShaking.value = false;
+      nextTick(function () { if (regCard.value) void regCard.value.offsetWidth; regShaking.value = true; });
+    }
+    function regShowHint(msg) { regHint.value = msg; regHintShow.value = true; regShake(); }
+    function regToggle() { showPass.value = !showPass.value; if (regPass.value) regPass.value.focus(); }
+
+    function onRegisterSubmit() {
+      if (regLoading.value || regSuccess.value) return;
+      var u = regName.value.trim(), em = regEmail.value.trim(), pw = regPassword.value, cf = regConfirm.value;
+      if (!u) { regShowHint('夫君还无名讳吗？'); regUser.value.focus(); return; }
+      if (!em) { regShowHint('冥府信笺地址成谜了'); regEmailInput.value.focus(); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { regShowHint('这信笺地址…怕不是阎王笔误？'); regEmailInput.value.focus(); return; }
+      if (pw.length < 6) { regShowHint('暗语至少六字，方镇得住花轿'); regPass.value.focus(); return; }
+      if (pw !== cf) { regShowHint('两遍暗语不符，花娘起疑了'); regConfirmInput.value.focus(); return; }
+      if (!regAgree.value) { regShowHint('需以魂魄为聘，方得结契'); return; }
+      regHintShow.value = false;
+      regLoading.value = true;
+      setTimeout(function () {
+        regLoading.value = false;
+        regSuccess.value = true;
+        rainHearts(regCard.value.getBoundingClientRect());
       }, 950);
     }
 
@@ -462,11 +605,14 @@ createApp({
     onBeforeUnmount(function () { timers.forEach(clearTimeout); });
 
     return {
-      stars, petals, fireflies,
-      cardEl, userInput, passInput,
-      username, password, showPass, remember,
-      loading, success, hintMsg, hintShow, shaking,
-      hearts, onSubmit, togglePass
+      stars, petals, fireflies, hearts, rainHearts,
+      mode, showPass,
+      loginCard, loginUser, loginPass, username, password, remember,
+      loginLoading, loginSuccess, loginHint, loginHintShow, loginShaking,
+      onLoginSubmit, loginToggle,
+      regCard, regUser, regEmailInput, regPass, regConfirmInput, regName, regEmail, regPassword, regConfirm, regAgree,
+      regLoading, regSuccess, regHint, regHintShow, regShaking,
+      onRegisterSubmit, regToggle
     };
   }
 }).mount('#app');
