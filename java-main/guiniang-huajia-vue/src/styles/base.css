@@ -1,0 +1,95 @@
+/* ========== 全局样式：:root 设计变量 + 高级动态主题 ========== */
+:root{
+  /* 原有品牌色 */
+  --bg1:#6A3A8E;
+  --bg2:#3B2363;
+  --bg3:#170C2B;
+  --pink:#FF6F9C;
+  --pink-deep:#E84A78;
+  --rose:#FFB3C8;
+  --gold:#F4D58B;
+  --ivory:#FFF7FB;
+  --line:#F0D9E4;
+  --ink:#4A2A3A;
+  --ink-soft:#8A6A82;
+
+  /* 高级动态感扩展 */
+  --glass: rgba(255,247,251,.07);
+  --glass-strong: rgba(255,247,251,.12);
+  --glow-pink: rgba(232,74,120,.55);
+  --glow-gold: rgba(244,213,139,.55);
+  --glow-violet: rgba(155,107,214,.5);
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+  --shadow-soft: 0 20px 50px rgba(13,4,32,.45);
+  --ease-out: cubic-bezier(.22,1,.36,1);
+  --font-serif: Georgia,"Songti SC","STSong","SimSun",serif;
+  --font-sans: "PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+
+body{
+  margin:0; min-height:100vh; padding:48px 16px;
+  display:grid; place-items:center; position:relative; overflow-x:hidden;
+  font-family:var(--font-sans);
+  color:var(--ink);
+  /* 基础深邃渐变（极光层会覆盖其上，这里作兜底） */
+  background:
+    radial-gradient(circle at 50% 8%, rgba(255,179,200,.18) 0%, rgba(255,179,200,0) 40%),
+    radial-gradient(circle at 50% 12%, var(--bg1) 0%, var(--bg2) 44%, var(--bg3) 100%);
+  background-attachment:fixed;
+}
+
+/* ---------- 高级玻璃质感工具类 ---------- */
+.glass{
+  background:var(--glass);
+  border:1px solid rgba(255,179,200,.28);
+  backdrop-filter:blur(14px) saturate(140%);
+  -webkit-backdrop-filter:blur(14px) saturate(140%);
+}
+
+/* ---------- 金光微光（shimmer） ---------- */
+@keyframes shimmer{
+  0%{ background-position: -200% 0; }
+  100%{ background-position: 200% 0; }
+}
+
+/* ---------- 滚动揭示（配合 v-reveal 指令） ---------- */
+.reveal{
+  opacity:0; transform:translateY(26px) scale(.985);
+  transition:opacity .7s var(--ease-out), transform .7s var(--ease-out);
+  will-change:opacity, transform;
+}
+.reveal.is-visible{
+  opacity:1; transform:none;
+}
+
+/* ---------- 高级滚动条 ---------- */
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-track{ background:rgba(255,247,251,.04); }
+::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg,var(--pink),var(--pink-deep));
+  border-radius:999px; border:2px solid transparent; background-clip:padding-box;
+}
+::-webkit-scrollbar-thumb:hover{ background:linear-gradient(180deg,var(--rose),var(--pink)); background-clip:padding-box; }
+
+/* ---------- 文本金色流光 ---------- */
+.gold-text{
+  background:linear-gradient(100deg,#FCE6B0 0%,#F4D58B 25%,#FFF7E8 45%,#E7B85A 65%,#F4D58B 100%);
+  background-size:200% auto;
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  animation:shimmer 6s linear infinite;
+}
+
+/* ---------- 尊重「减少动态效果」偏好 ---------- */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.001ms !important;
+    scroll-behavior:auto !important;
+  }
+  .reveal{ opacity:1; transform:none; }
+}
