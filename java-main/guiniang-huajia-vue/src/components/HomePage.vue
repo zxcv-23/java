@@ -7,7 +7,7 @@ import BannerCarousel from './BannerCarousel.vue'
 const props = defineProps({
   user: { type: Object, default: null }
 })
-const emit = defineEmits(['logout'])
+const emit = defineEmits(['logout', 'goAdmin'])
 
 // ---------- 接口地址 ----------
 const API_BASE = 'http://127.0.0.1:8081'
@@ -31,6 +31,11 @@ const userName = props.user
   : '夫君'
 function onLogout() {
   emit('logout')
+}
+
+// 进入后台管理系统（点击导航栏「后台管理」）
+function goAdmin() {
+  emit('goAdmin')
 }
 
 // ---------- 首页数据（展示功能） ----------
@@ -210,6 +215,10 @@ function onHotTag(tag) {
         >{{ item }}</button>
       </nav>
 
+      <button class="nav-admin" type="button" @click="goAdmin" title="进入后台管理系统">
+        <span class="admin-ico">🛡️</span> 后台管理
+      </button>
+
       <div class="nav-user">
         <span class="user-chip" title="当前夫君">
           <span class="user-avatar">🌹</span>
@@ -331,10 +340,10 @@ function onHotTag(tag) {
   position:sticky; top:0; z-index:20;
   display:flex; align-items:center; gap:18px;
   padding:12px clamp(16px,4vw,40px);
-  background:linear-gradient(180deg, rgba(43,22,74,.82), rgba(43,22,74,.5));
-  border-bottom:1px solid rgba(244,213,139,.55);
-  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
-  box-shadow:0 6px 24px rgba(20,8,40,.4);
+  background:linear-gradient(180deg, rgba(43,22,74,.86), rgba(43,22,74,.52));
+  border-bottom:1px solid var(--hairline);
+  backdrop-filter:blur(14px) saturate(140%); -webkit-backdrop-filter:blur(14px) saturate(140%);
+  box-shadow:0 8px 28px rgba(20,8,40,.42), inset 0 1px 0 rgba(255,255,255,.10);
 }
 .brand{ display:flex; align-items:baseline; gap:8px; }
 .brand-ico{ font-size:18px; filter:drop-shadow(0 2px 4px rgba(232,74,120,.5)); }
@@ -347,17 +356,41 @@ function onHotTag(tag) {
 
 .nav-links{ display:flex; gap:6px; margin:0 auto; flex-wrap:wrap; }
 .nav-link{
-  border:none; background:transparent; cursor:pointer;
+  position:relative; border:none; background:transparent; cursor:pointer;
   color:var(--rose); font-size:14px; letter-spacing:2px; font-family:inherit;
-  padding:8px 16px; border-radius:999px; transition:.2s;
+  padding:8px 16px; border-radius:999px; transition:.22s var(--ease-out);
 }
 .nav-link:hover{ color:#fff; background:rgba(255,179,200,.14); }
 .nav-link.active{
   color:#fff; background:linear-gradient(180deg,#FF8FB4,#E84A78);
-  box-shadow:0 4px 12px rgba(232,74,120,.5);
+  box-shadow:0 4px 12px rgba(232,74,120,.5), inset 0 1px 0 rgba(255,255,255,.3);
 }
+.nav-link::after{
+  content:""; position:absolute; left:50%; bottom:1px; height:2px; width:0; transform:translateX(-50%);
+  background:linear-gradient(90deg, transparent, var(--gold), transparent);
+  border-radius:2px; transition:width .25s var(--ease-out);
+}
+.nav-link:hover::after{ width:42%; }
 
 .nav-user{ display:flex; align-items:center; gap:10px; }
+
+/* ---------- 后台管理入口按钮 ---------- */
+.nav-admin{
+  position:relative; display:flex; align-items:center; gap:6px; overflow:hidden;
+  border:1px solid rgba(155,107,214,.7); cursor:pointer;
+  color:#fff; font-size:13px; letter-spacing:1px; font-family:inherit;
+  padding:8px 16px; border-radius:999px; transition:.22s var(--ease-out); white-space:nowrap;
+  background:linear-gradient(180deg, rgba(155,107,214,.46), rgba(106,58,160,.46));
+  box-shadow:0 4px 14px rgba(106,58,160,.38), inset 0 1px 0 rgba(255,255,255,.18);
+}
+.nav-admin:hover{ color:#fff; background:linear-gradient(180deg,#9B6BD6,#6A3AA0); box-shadow:0 6px 18px rgba(106,58,160,.55); }
+.nav-admin .admin-ico{ font-size:14px; }
+.nav-admin::after{
+  content:""; position:absolute; inset:0; border-radius:999px;
+  background:var(--sheen); background-size:220% 100%;
+  animation:shimmer 5s linear infinite; opacity:0; transition:opacity .25s;
+}
+.nav-admin:hover::after{ opacity:.3; }
 .user-chip{
   display:flex; align-items:center; gap:8px;
   padding:5px 12px 5px 6px; border-radius:999px;
@@ -392,22 +425,27 @@ function onHotTag(tag) {
   margin:0 auto 4px; display:block;
 }
 .hero-title{
-  margin:6px 0 6px; font-size:clamp(24px,4vw,34px); letter-spacing:3px;
-  font-family:Georgia,"Songti SC","STSong","SimSun",serif; color:var(--ivory);
-  text-shadow:0 0 22px rgba(255,179,200,.55);
+  margin:6px 0 6px; font-size:clamp(24px,4.4vw,36px); letter-spacing:3px; line-height:1.25;
+  font-family:Georgia,"Songti SC","STSong","SimSun",serif;
+  background:linear-gradient(100deg,#FFE6F0 0%,#FFB3C8 30%,#F4D58B 56%,#FF8FB4 80%,#FFF7FB 100%);
+  background-size:220% auto; -webkit-background-clip:text; background-clip:text; color:transparent;
+  animation:shimmer 9s linear infinite;
+  filter:drop-shadow(0 2px 18px rgba(255,179,200,.35));
 }
-.hero-sub{ margin:0 0 26px; font-size:13px; letter-spacing:4px; color:var(--gold); opacity:.85; }
+.hero-sub{ margin:0 0 26px; font-size:13px; letter-spacing:5px; color:var(--gold); opacity:.9; text-shadow:0 0 14px rgba(244,213,139,.4); }
 
 .search{
   display:flex; align-items:center; gap:10px;
   width:min(640px,92vw); margin:0 auto;
   padding:8px 8px 8px 18px;
-  background:rgba(255,247,251,.14);
+  background:linear-gradient(180deg, rgba(255,247,251,.18), rgba(255,247,251,.08));
   border:2px solid var(--gold);
   border-radius:999px;
-  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-  box-shadow:0 16px 40px rgba(20,8,40,.45), 0 0 0 6px rgba(255,179,200,.16);
+  backdrop-filter:blur(10px) saturate(140%); -webkit-backdrop-filter:blur(10px) saturate(140%);
+  box-shadow:0 18px 46px rgba(20,8,40,.45), 0 0 0 6px rgba(255,179,200,.14), 0 0 30px rgba(244,213,139,.18);
+  transition:box-shadow .3s var(--ease-out), border-color .3s;
 }
+.search:focus-within{ border-color:#FFE9B8; box-shadow:0 18px 46px rgba(20,8,40,.5), 0 0 0 6px rgba(255,179,200,.20), 0 0 44px rgba(244,213,139,.32); }
 .search-ico{ font-size:18px; opacity:.7; }
 .search-input{
   flex:1; min-width:0; border:none; outline:none; background:transparent;
@@ -415,14 +453,19 @@ function onHotTag(tag) {
 }
 .search-input::placeholder{ color:rgba(255,230,240,.55); }
 .search-btn{
-  flex:0 0 auto; border:none; cursor:pointer;
+  position:relative; overflow:hidden; flex:0 0 auto; border:none; cursor:pointer;
   padding:12px 26px; border-radius:999px;
   font-family:Georgia,"Songti SC",serif; font-size:15px; font-weight:700; letter-spacing:3px; color:#fff;
   background:linear-gradient(180deg,#FF8FB4,#E84A78);
-  box-shadow:0 6px 0 #C93363, 0 12px 20px rgba(232,74,120,.45);
+  box-shadow:0 6px 0 #C93363, 0 12px 22px rgba(232,74,120,.45), inset 0 1px 0 rgba(255,255,255,.3);
   transition:transform .14s, filter .2s, box-shadow .14s;
 }
+.search-btn::after{
+  content:""; position:absolute; top:0; left:-60%; width:50%; height:100%;
+  background:var(--sheen); transform:skewX(-20deg); opacity:0; transition:left .6s ease, opacity .3s; pointer-events:none;
+}
 .search-btn:hover{ filter:brightness(1.05); transform:translateY(-2px); }
+.search-btn:hover::after{ left:120%; opacity:.6; }
 .search-btn:active{ transform:translateY(3px); box-shadow:0 2px 0 #C93363, 0 6px 12px rgba(232,74,120,.35); }
 .search-btn:disabled{ cursor:default; filter:grayscale(.2); }
 
@@ -434,14 +477,14 @@ function onHotTag(tag) {
 .cat-chip{
   border:1px solid rgba(244,213,139,.5); background:rgba(255,247,251,.08);
   color:var(--gold); font-size:13px; letter-spacing:1px;
-  padding:7px 15px; border-radius:999px; cursor:pointer; transition:.18s; font-family:inherit;
+  padding:7px 15px; border-radius:999px; cursor:pointer; transition:.2s var(--ease-out); font-family:inherit;
 }
-.cat-chip:hover{ color:#fff; background:rgba(244,213,139,.18); }
+.cat-chip:hover{ color:#fff; background:rgba(244,213,139,.2); box-shadow:0 4px 12px rgba(231,184,90,.28); }
 .cat-chip.active{
   color:#2b164a; font-weight:700;
   background:linear-gradient(180deg,#F4D58B,#E7B85A);
   border-color:var(--gold);
-  box-shadow:0 4px 12px rgba(231,184,90,.5);
+  box-shadow:0 4px 14px rgba(231,184,90,.5), inset 0 1px 0 rgba(255,255,255,.4);
 }
 .subcats{
   display:flex; flex-wrap:wrap; gap:7px; justify-content:center; align-items:center;
@@ -471,8 +514,11 @@ function onHotTag(tag) {
 .result-title{
   text-align:center; margin:6px 0 18px;
   font-size:clamp(17px,2.4vw,22px); letter-spacing:2px;
-  font-family:Georgia,"Songti SC","STSong","SimSun",serif; color:var(--ivory);
-  text-shadow:0 0 16px rgba(255,179,200,.4);
+  font-family:Georgia,"Songti SC","STSong","SimSun",serif;
+  background:linear-gradient(100deg,#FFE6F0,#FFB3C8 40%,#F4D58B 75%,#FF8FB4);
+  background-size:200% auto; -webkit-background-clip:text; background-clip:text; color:transparent;
+  animation:shimmer 8s linear infinite;
+  filter:drop-shadow(0 2px 14px rgba(255,179,200,.35));
 }
 .result-hint{ text-align:center; color:var(--rose); opacity:.7; font-size:13.5px; letter-spacing:1px; }
 .result-notice{
@@ -490,9 +536,9 @@ function onHotTag(tag) {
 }
 .card{
   position:relative; padding:24px 22px 26px; text-align:center;
-  background:linear-gradient(160deg, rgba(255,253,254,.96) 0%, rgba(253,243,248,.92) 100%);
+  background:linear-gradient(160deg, rgba(255,253,254,.97) 0%, rgba(253,243,248,.93) 100%);
   border-radius:22px; overflow:hidden;
-  box-shadow:0 18px 44px rgba(20,8,40,.42), inset 0 0 0 1px rgba(255,179,200,.22);
+  box-shadow:var(--shadow-2), inset 0 0 0 1px rgba(255,179,200,.22), inset 0 1px 0 rgba(255,255,255,.7);
   transition:transform .4s var(--ease-out), box-shadow .4s var(--ease-out);
 }
 /* 悬停时旋转金粉描边 */
@@ -509,7 +555,7 @@ function onHotTag(tag) {
   background:linear-gradient(120deg, transparent, rgba(255,255,255,.5), transparent);
   transform:skewX(-20deg); transition:left .7s ease; pointer-events:none;
 }
-.card:hover{ transform:translateY(-8px); box-shadow:0 30px 60px rgba(232,74,120,.4), 0 0 32px rgba(244,213,139,.32); }
+.card:hover{ transform:translateY(-8px); box-shadow:0 34px 66px rgba(232,74,120,.42), 0 0 36px rgba(244,213,139,.30), inset 0 0 0 1px rgba(244,213,139,.35); }
 .card:hover::before{ opacity:1; animation:spinBorder 4s linear infinite; }
 .card:hover::after{ left:120%; }
 @property --angle{ syntax:'<angle>'; initial-value:0deg; inherits:false; }

@@ -25,6 +25,18 @@
   --ease-out: cubic-bezier(.22,1,.36,1);
   --font-serif: Georgia,"Songti SC","STSong","SimSun",serif;
   --font-sans: "PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;
+
+  /* ---------- 精致层级与描金细边（在原配色基础上扩展，不改主题色） ---------- */
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --hairline: rgba(244,213,139,.22);          /* 金色细描边 */
+  --hairline-soft: rgba(255,179,200,.18);
+  --shadow-1: 0 10px 26px rgba(13,4,32,.30);
+  --shadow-2: 0 18px 46px rgba(13,4,32,.40);
+  --shadow-3: 0 32px 78px rgba(13,4,32,.55);
+  --focus-ring: 0 0 0 4px rgba(255,111,156,.18), 0 0 0 1px var(--gold);
+  --focus-ring-violet: 0 0 0 4px rgba(155,107,214,.20), 0 0 0 1px var(--gold);
+  --sheen: linear-gradient(115deg, transparent 32%, rgba(255,255,255,.55) 50%, transparent 68%);
 }
 
 *{ box-sizing:border-box; }
@@ -44,11 +56,35 @@ body{
 
 /* ---------- 高级玻璃质感工具类 ---------- */
 .glass{
-  background:var(--glass);
-  border:1px solid rgba(255,179,200,.28);
+  background:linear-gradient(180deg, rgba(255,247,251,.12), rgba(255,247,251,.06));
+  border:1px solid rgba(255,179,200,.30);
   backdrop-filter:blur(14px) saturate(140%);
   -webkit-backdrop-filter:blur(14px) saturate(140%);
+  box-shadow:var(--shadow-2), inset 0 1px 0 rgba(255,255,255,.18);
 }
+
+/* ---------- 描金玻璃（更高级的面板/卡片底） ---------- */
+.glass-lux{
+  background:linear-gradient(180deg, rgba(255,247,251,.14), rgba(255,247,251,.05));
+  border:1px solid var(--hairline);
+  backdrop-filter:blur(18px) saturate(150%);
+  -webkit-backdrop-filter:blur(18px) saturate(150%);
+  box-shadow:var(--shadow-3), inset 0 1px 0 rgba(255,255,255,.20), inset 0 0 0 1px rgba(255,255,255,.04);
+}
+
+/* ---------- 描金内细边 ---------- */
+.gold-hairline{ box-shadow:inset 0 0 0 1px var(--hairline); }
+
+/* ---------- 文本金色流光（更细腻） ---------- */
+.gold-text{
+  background:linear-gradient(100deg,#FCE6B0 0%,#F4D58B 22%,#FFF7E8 44%,#E7B85A 66%,#F4D58B 100%);
+  background-size:220% auto;
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  animation:shimmer 7s linear infinite;
+}
+
+/* ---------- 选中文本 ---------- */
+::selection{ background:rgba(232,74,120,.32); color:#fff; }
 
 /* ---------- 金光微光（shimmer） ---------- */
 @keyframes shimmer{
