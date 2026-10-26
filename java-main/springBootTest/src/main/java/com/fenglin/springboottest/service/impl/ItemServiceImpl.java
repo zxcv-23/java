@@ -2,6 +2,7 @@ package com.fenglin.springboottest.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fenglin.springboottest.dto.HomeVO;
+import com.fenglin.springboottest.dto.ItemManageVO;
 import com.fenglin.springboottest.dto.ItemSearchVO;
 import com.fenglin.springboottest.entity.Item;
 import com.fenglin.springboottest.mapper.ItemMapper;
@@ -48,5 +49,10 @@ public class ItemServiceImpl extends ServiceImpl<ItemMapper, Item> implements It
         vo.setHotTags(baseMapper.hotTags());
         vo.setBanners(bannerService.listActive());
         return vo;
+    }
+
+    @Override
+    public List<ItemManageVO> manageList(String keyword, Long categoryId) {
+        return baseMapper.manageList(keyword, categoryId);
     }
 }

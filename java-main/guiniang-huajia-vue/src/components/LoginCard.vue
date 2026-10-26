@@ -72,7 +72,7 @@ async function onSubmit() {
     }
   } catch (e) {
     loading.value = false
-    showHint('冥府信道受阻，请确认后端已启动')
+    showHint('后端服务未连接 · 请确认后端已启动（双击 start-all.bat，或在此跟我说「重启」）')
   }
 }
 </script>

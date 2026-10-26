@@ -8,6 +8,7 @@ import HeartLayer from './components/HeartLayer.vue'
 import HomePage from './components/HomePage.vue'
 import AdminLogin from './components/AdminLogin.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
+import BackendStatusBanner from './components/BackendStatusBanner.vue'
 
 const heartLayer = ref(null)
 // 模式：login | register | home | admin-login | admin
@@ -105,6 +106,7 @@ function backToHome() {
 
 <template>
   <AuroraBackdrop />
+  <BackendStatusBanner />
   <div class="moon" aria-hidden="true"><span class="moon-ring"></span></div>
   <NightSky />
   <div v-if="mode === 'login' || mode === 'register'" class="switch" role="tablist">
