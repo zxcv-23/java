@@ -129,3 +129,26 @@ body{
   }
   .reveal{ opacity:1; transform:none; }
 }
+
+/* ========== 3D 倾斜 + 光泽追随（配合 main.js 的 v-tilt 指令） ========== */
+.tilt-host{
+  perspective:1000px;
+  transform-style:preserve-3d;
+  will-change:transform;
+  transition:transform .18s var(--ease-out);
+  transform:perspective(1000px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));
+  position:relative;
+}
+.tilt-sheen{
+  position:absolute; inset:0; z-index:9;
+  pointer-events:none; border-radius:26px;
+  opacity:0; transition:opacity .25s;
+  background:radial-gradient(460px circle at var(--sx,50%) var(--sy,50%),
+    rgba(255,224,240,.20) 0%, rgba(255,179,200,.08) 38%, transparent 62%);
+  mix-blend-mode:screen;
+}
+.tilt-host:hover .tilt-sheen{ opacity:1; }
+
+/* 微微发光的科技感悬停（通用点缀） */
+.glow-soft{ transition:box-shadow .25s var(--ease-out), filter .25s; }
+.glow-soft:hover{ filter:brightness(1.04); }

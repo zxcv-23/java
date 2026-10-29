@@ -1,7 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import NightSky from './components/NightSky.vue'
-import AuroraBackdrop from './components/AuroraBackdrop.vue'
+import AnimeBackground from './components/AnimeBackground.vue'
 import LoginCard from './components/LoginCard.vue'
 import RegisterCard from './components/RegisterCard.vue'
 import HeartLayer from './components/HeartLayer.vue'
@@ -105,10 +104,8 @@ function backToHome() {
 </script>
 
 <template>
-  <AuroraBackdrop />
+  <AnimeBackground />
   <BackendStatusBanner />
-  <div class="moon" aria-hidden="true"><span class="moon-ring"></span></div>
-  <NightSky />
   <div v-if="mode === 'login' || mode === 'register'" class="switch" role="tablist">
     <button type="button" :class="{ active: mode === 'login' }" @click="mode = 'login'">缔 结 婚 约</button>
     <button type="button" :class="{ active: mode === 'register' }" @click="mode = 'register'">录 入 新 生</button>
@@ -124,37 +121,6 @@ function backToHome() {
 </template>
 
 <style scoped>
-/* ---------- 月亮 ---------- */
-.moon{
-  position:fixed; left:50%; top:5%; transform:translateX(-50%);
-  width:180px; height:180px; border-radius:50%;
-  background:radial-gradient(circle at 38% 34%, #FFF8FC 0%, #F7D9EA 52%, #E9B9D6 100%);
-  box-shadow:0 0 80px 26px rgba(247,200,230,.42), 0 0 180px 56px rgba(190,120,180,.22), inset -18px -22px 48px rgba(170,110,165,.30);
-  z-index:1;
-  animation:moonPulse 9s ease-in-out infinite;
-}
-@keyframes moonPulse{
-  0%,100%{ box-shadow:0 0 70px 24px rgba(247,200,230,.40), 0 0 170px 52px rgba(190,120,180,.20), inset -18px -22px 48px rgba(170,110,165,.28); }
-  50%{ box-shadow:0 0 96px 32px rgba(247,200,230,.55), 0 0 210px 66px rgba(190,120,180,.32), inset -18px -22px 48px rgba(170,110,165,.34); }
-}
-.moon::after{
-  content:""; position:absolute; right:30px; top:34px; width:34px; height:34px; border-radius:50%;
-  background:rgba(200,150,190,.28);
-  box-shadow:-46px 36px 0 -6px rgba(200,150,190,.22), 28px 60px 0 -12px rgba(200,150,190,.2);
-}
-/* 描金月环：缓缓旋转的金丝 + 虚线，营造月夜婚礼的华美 */
-.moon-ring{
-  position:absolute; inset:-36px; z-index:-1; border-radius:50%;
-  border:1px solid rgba(244,213,139,.24);
-  box-shadow:0 0 46px 8px rgba(244,213,139,.10), inset 0 0 38px rgba(244,213,139,.10);
-  animation:ringSpin 70s linear infinite;
-}
-.moon-ring::before{
-  content:""; position:absolute; inset:16px; border-radius:50%;
-  border:1px dashed rgba(255,179,200,.30);
-}
-@keyframes ringSpin{ to{ transform:rotate(360deg); } }
-
 /* ---------- 登录 / 注册 分段切换（描金玻璃胶囊） ---------- */
 .switch{
   position:relative; z-index:5; display:flex; gap:4px; padding:6px; margin-bottom:14px;

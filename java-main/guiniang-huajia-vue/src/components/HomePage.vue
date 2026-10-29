@@ -25,6 +25,14 @@ function flashToast(msg) {
   toastTimer = setTimeout(() => (pageToast.value = ''), 2200)
 }
 
+// ---------- 左侧导航侧边栏 ----------
+const railOpen = ref(false)
+const railIcons = { '首页': '🏮', '姻缘簿': '💞', '花轿信使': '📜', '红妆阁': '🌹', '往生簿': '🕯️' }
+function goNav(item) {
+  onNav(item)
+  railOpen.value = false
+}
+
 // 当前夫君名讳（优先取后端返回的 account / username / name）
 const userName = props.user
   ? (props.user.account || props.user.username || props.user.name || '夫君')
@@ -201,19 +209,12 @@ function onHotTag(tag) {
   <div class="home">
     <!-- ============ 导航栏 ============ -->
     <header class="nav">
+      <button class="rail-toggle" type="button" @click="railOpen = !railOpen" aria-label="展开/收起导航">☰</button>
       <div class="brand">
         <span class="brand-ico">💕</span>
         <span class="brand-name">鬼娘花嫁</span>
         <span class="brand-sub">月夜婚礼</span>
       </div>
-
-      <nav class="nav-links" aria-label="主导航">
-        <button
-          v-for="item in navItems" :key="item" type="button"
-          class="nav-link" :class="{ active: activeNav === item }"
-          @click="onNav(item)"
-        >{{ item }}</button>
-      </nav>
 
       <button class="nav-admin" type="button" @click="goAdmin" title="进入后台管理系统">
         <span class="admin-ico">🛡️</span> 后台管理
@@ -227,6 +228,22 @@ function onHotTag(tag) {
         <button class="logout" type="button" @click="onLogout">退 出</button>
       </div>
     </header>
+
+    <!-- ============ 左侧导航侧边栏（描金玻璃滑轨） ============ -->
+    <aside class="rail" :class="{ open: railOpen }" aria-label="侧边导航">
+      <div class="rail-head">
+        <button class="rail-grip" type="button" @click="railOpen = !railOpen" aria-label="收起/展开导航">{{ railOpen ? '✕' : '☰' }}</button>
+        <span class="rail-brand">花嫁道</span>
+      </div>
+      <button
+        v-for="item in navItems" :key="'r' + item" type="button"
+        class="rail-item" :class="{ active: activeNav === item }"
+        @click="goNav(item)"
+      >
+        <span class="ri-ico">{{ railIcons[item] || '💮' }}</span>
+        <span class="ri-txt">{{ item }}</span>
+      </button>
+    </aside>
 
     <transition name="toast">
       <div v-if="pageToast" class="page-toast">{{ pageToast }}</div>
@@ -333,7 +350,9 @@ function onHotTag(tag) {
   width:100%; min-height:100vh;
   display:flex; flex-direction:column;
   position:relative; z-index:5;
+  padding-left:60px;
 }
+@media (max-width:720px){ .home{ padding-left:0; } }
 
 /* ---------- 导航栏 ---------- */
 .nav{
@@ -354,23 +373,55 @@ function onHotTag(tag) {
 }
 .brand-sub{ font-size:11px; letter-spacing:3px; color:var(--gold); opacity:.8; }
 
-.nav-links{ display:flex; gap:6px; margin:0 auto; flex-wrap:wrap; }
-.nav-link{
-  position:relative; border:none; background:transparent; cursor:pointer;
+/* ---------- 左侧导航侧边栏（描金玻璃滑轨） ---------- */
+.rail-toggle{
+  display:grid; place-items:center; flex:0 0 auto;
+  width:38px; height:38px; border-radius:12px; cursor:pointer;
+  border:1px solid rgba(244,213,139,.5); background:rgba(255,247,251,.08);
+  color:var(--gold); font-size:16px; transition:.2s var(--ease-out);
+}
+.rail-toggle:hover{ color:#fff; background:rgba(244,213,139,.18); box-shadow:0 0 14px rgba(244,213,139,.3); }
+.nav-admin{ margin-left:auto; }
+
+.rail{
+  position:fixed; left:0; top:64px; bottom:0; z-index:19;
+  width:216px; padding:14px 10px;
+  display:flex; flex-direction:column; gap:6px;
+  background:linear-gradient(180deg, rgba(43,22,74,.82), rgba(43,22,74,.5));
+  border-right:1px solid var(--hairline);
+  border-radius:0 18px 18px 0;
+  backdrop-filter:blur(16px) saturate(140%); -webkit-backdrop-filter:blur(16px) saturate(140%);
+  box-shadow:10px 0 34px rgba(13,4,32,.38);
+  overflow:hidden;
+  transform:translateX(calc(-100% + 60px));
+  transition:transform .38s var(--ease-out);
+}
+.rail:hover,.rail:focus-within,.rail.open{ transform:none; }
+.rail-head{ display:flex; align-items:center; gap:8px; margin-bottom:6px; padding-left:2px; }
+.rail-grip{
+  width:36px; height:36px; flex:0 0 36px; border-radius:12px; cursor:pointer;
+  border:1px solid rgba(244,213,139,.5); background:rgba(255,247,251,.08);
+  color:var(--gold); font-size:15px; transition:.2s;
+}
+.rail-grip:hover{ color:#fff; background:rgba(244,213,139,.18); }
+.rail-brand{ font-size:12px; letter-spacing:3px; color:var(--gold); opacity:.85; white-space:nowrap; }
+.rail-item{
+  display:flex; align-items:center; gap:12px; width:100%;
+  border:none; background:transparent; cursor:pointer;
   color:var(--rose); font-size:14px; letter-spacing:2px; font-family:inherit;
-  padding:8px 16px; border-radius:999px; transition:.22s var(--ease-out);
+  padding:11px 12px; border-radius:14px; transition:.22s var(--ease-out);
+  white-space:nowrap; text-align:left;
 }
-.nav-link:hover{ color:#fff; background:rgba(255,179,200,.14); }
-.nav-link.active{
+.rail-item .ri-ico{ font-size:17px; width:24px; text-align:center; filter:drop-shadow(0 2px 6px rgba(232,74,120,.4)); }
+.rail-item:hover{ color:#fff; background:rgba(255,179,200,.14); }
+.rail-item.active{
   color:#fff; background:linear-gradient(180deg,#FF8FB4,#E84A78);
-  box-shadow:0 4px 12px rgba(232,74,120,.5), inset 0 1px 0 rgba(255,255,255,.3);
+  box-shadow:0 4px 14px rgba(232,74,120,.5), inset 0 1px 0 rgba(255,255,255,.3);
 }
-.nav-link::after{
-  content:""; position:absolute; left:50%; bottom:1px; height:2px; width:0; transform:translateX(-50%);
-  background:linear-gradient(90deg, transparent, var(--gold), transparent);
-  border-radius:2px; transition:width .25s var(--ease-out);
+@media (max-width:720px){
+  .rail{ top:0; z-index:40; width:min(240px,80vw); transform:translateX(-110%); border-radius:0; }
+  .rail.open{ transform:none; box-shadow:20px 0 60px rgba(13,4,32,.6); }
 }
-.nav-link:hover::after{ width:42%; }
 
 .nav-user{ display:flex; align-items:center; gap:10px; }
 
@@ -533,6 +584,7 @@ function onHotTag(tag) {
 .cards{
   display:grid; gap:18px;
   grid-template-columns:repeat(auto-fill, minmax(220px,1fr));
+  perspective:1400px;
 }
 .card{
   position:relative; padding:24px 22px 26px; text-align:center;
@@ -555,7 +607,10 @@ function onHotTag(tag) {
   background:linear-gradient(120deg, transparent, rgba(255,255,255,.5), transparent);
   transform:skewX(-20deg); transition:left .7s ease; pointer-events:none;
 }
-.card:hover{ transform:translateY(-8px); box-shadow:0 34px 66px rgba(232,74,120,.42), 0 0 36px rgba(244,213,139,.30), inset 0 0 0 1px rgba(244,213,139,.35); }
+.card:hover{
+  transform:translateY(-8px) rotateX(3deg);
+  box-shadow:0 34px 66px rgba(232,74,120,.42), 0 0 36px rgba(244,213,139,.30), 0 0 60px rgba(255,143,180,.28), inset 0 0 0 1px rgba(244,213,139,.35);
+}
 .card:hover::before{ opacity:1; animation:spinBorder 4s linear infinite; }
 .card:hover::after{ left:120%; }
 @property --angle{ syntax:'<angle>'; initial-value:0deg; inherits:false; }
@@ -580,7 +635,6 @@ function onHotTag(tag) {
 
 @media (max-width:680px){
   .nav{ flex-wrap:wrap; gap:10px; }
-  .nav-links{ order:3; width:100%; justify-content:center; margin:0; }
   .brand-sub{ display:none; }
 }
 </style>

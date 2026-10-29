@@ -78,6 +78,7 @@ async function onSubmit() {
 </script>
 
 <template>
+  <div v-tilt="{ strength: 5 }" class="tilt-wrap">
   <main ref="cardEl" class="card" :class="{ shake: shaking }">
     <HeroCrest :size="112" class="login-crest" />
 
@@ -137,6 +138,7 @@ async function onSubmit() {
 
     <p class="foot">还未与我结契？<a class="link" href="#" @click.prevent="$emit('switch')">录入新生契约 →</a></p>
   </main>
+  </div>
 </template>
 
 <style scoped>
