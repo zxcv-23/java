@@ -7,6 +7,7 @@ import HeartLayer from './components/HeartLayer.vue'
 import HomePage from './components/HomePage.vue'
 import AdminLogin from './components/AdminLogin.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
+import PersonalCenter from './components/PersonalCenter.vue'
 import BackendStatusBanner from './components/BackendStatusBanner.vue'
 
 const heartLayer = ref(null)
@@ -53,21 +54,12 @@ function onCelebrate(rect) {
   heartLayer.value && heartLayer.value.rain(rect)
 }
 
-// 登录/注册成功 → 短暂展示爱心雨后跳转首页
-let homeTimer = null
-function goHome() {
-  currentUser.value = readStoredUser()
-  clearTimeout(homeTimer)
-  homeTimer = setTimeout(() => {
-    mode.value = 'home'
-  }, 1500)
-}
-
 // 退出前台登录 → 清除会话并返回登录页
 function logout() {
   window.localStorage.removeItem('guiniang_user')
   window.sessionStorage.removeItem('guiniang_user')
   currentUser.value = null
+  pendingProfile = false
   mode.value = 'login'
 }
 
@@ -81,6 +73,58 @@ function goAdmin() {
   } else {
     mode.value = 'admin-login'
   }
+}
+
+// ---------- 个人中心路由 ----------
+// 未登录时点了「个人中心」→ 先去登录，登录成功后自动回到个人资料编辑页
+let pendingProfile = false
+
+// 从首页导航栏「个人中心」进入：已登录直接进编辑页，否则先去登录页
+function goProfile() {
+  if (currentUser.value && currentUser.value.token) {
+    pendingProfile = false
+    mode.value = 'profile'
+  } else {
+    pendingProfile = true
+    mode.value = 'login'
+  }
+}
+
+// 个人资料编辑页里登录失效 → 回登录页，登录成功后仍回到编辑页
+function profileNeedLogin() {
+  pendingProfile = true
+  mode.value = 'login'
+}
+
+// 登录/注册成功 → 短暂展示爱心雨后跳转首页
+let homeTimer = null
+function goHome() {
+  currentUser.value = readStoredUser()
+  clearTimeout(homeTimer)
+  homeTimer = setTimeout(() => {
+    // 若是从「个人中心」被引导来登录的，登录后直接回编辑页
+    if (pendingProfile && currentUser.value && currentUser.value.token) {
+      pendingProfile = false
+      mode.value = 'profile'
+    } else {
+      mode.value = 'home'
+    }
+  }, 1500)
+}
+
+// 个人中心改密后后端返回新 token，同步刷新本地登录态（沿用原存储位置）
+function refreshUserToken(newToken) {
+  const next = { ...(currentUser.value || {}), token: newToken }
+  currentUser.value = next
+  try {
+    const raw = window.localStorage.getItem('guiniang_user')
+    if (raw) {
+      window.localStorage.setItem('guiniang_user', JSON.stringify(next))
+      return
+    }
+    const sess = window.sessionStorage.getItem('guiniang_user')
+    if (sess) window.sessionStorage.setItem('guiniang_user', JSON.stringify(next))
+  } catch { /* 忽略持久化异常 */ }
 }
 
 // 后台登录成功 → 进入后台主界面
@@ -113,9 +157,10 @@ function backToHome() {
   <transition name="swap" mode="out-in">
     <LoginCard v-if="mode === 'login'" key="login" @celebrate="onCelebrate" @switch="mode = 'register'" @loggedIn="goHome" />
     <RegisterCard v-else-if="mode === 'register'" key="register" @celebrate="onCelebrate" @switch="mode = 'login'" @loggedIn="goHome" />
-    <HomePage v-else-if="mode === 'home'" key="home" :user="currentUser" @logout="logout" @goAdmin="goAdmin" />
+    <HomePage v-else-if="mode === 'home'" key="home" :user="currentUser" @logout="logout" @goAdmin="goAdmin" @goProfile="goProfile" />
     <AdminLogin v-else-if="mode === 'admin-login'" key="admin-login" @loggedIn="goAdminHome" @back="backToHome" />
     <AdminDashboard v-else-if="mode === 'admin'" key="admin" :admin="currentAdmin" @logout="adminLogout" @back="backToHome" />
+    <PersonalCenter v-else-if="mode === 'profile'" key="profile" :user="currentUser" @back="backToHome" @logout="logout" @tokenRefreshed="refreshUserToken" @needLogin="profileNeedLogin" />
   </transition>
   <HeartLayer ref="heartLayer" />
 </template>

@@ -4,13 +4,20 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fenglin.springboottest.dto.LoginRequest;
 import com.fenglin.springboottest.dto.LoginResponse;
+import com.fenglin.springboottest.dto.PasswordChangeRequest;
+import com.fenglin.springboottest.dto.ProfileUpdateRequest;
+import com.fenglin.springboottest.dto.ProfileVO;
 import com.fenglin.springboottest.dto.RegisterRequest;
 import com.fenglin.springboottest.entity.User;
 import com.fenglin.springboottest.exception.BusinessException;
 import com.fenglin.springboottest.mapper.UserMapper;
+import com.fenglin.springboottest.security.JwtService;
+import com.fenglin.springboottest.service.FileUploadService;
 import com.fenglin.springboottest.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 /**
  * 用户服务实现
@@ -20,6 +27,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     /** BCrypt 密码加密器（带随机盐，每次加密结果不同，安全性高） */
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    @Autowired
+    private JwtService jwtService;
+
+    @Autowired
+    private FileUploadService fileUploadService;
 
     @Override
     public void register(RegisterRequest request) {
@@ -66,6 +79,121 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new BusinessException("名讳或暗语不匹配，花娘不认这道婚约");
         }
 
-        return LoginResponse.from(user);
+        LoginResponse resp = LoginResponse.from(user);
+        // 签发 JWT，前端后续请求通过 Authorization 头携带；写入令牌版本号以支持主动失效
+        resp.setToken(jwtService.generateToken(user.getId(), user.getUsername(), user.getTokenVersion()));
+        return resp;
+    }
+
+    @Override
+    public ProfileVO getProfile(Long userId) {
+        User user = getById(userId);
+        if (user == null) {
+            throw new BusinessException("未找到该用户");
+        }
+        return ProfileVO.from(user);
+    }
+
+    @Override
+    public void updateProfile(Long userId, ProfileUpdateRequest request) {
+        User user = getById(userId);
+        if (user == null) {
+            throw new BusinessException("未找到该用户");
+        }
+
+        // ---------- 唯一性校验（排除自己） ----------
+        if (StringUtils.hasText(request.getEmail())) {
+            String email = request.getEmail().trim();
+            long cnt = baseMapper.selectCount(new LambdaQueryWrapper<User>()
+                    .eq(User::getEmail, email)
+                    .ne(User::getId, userId));
+            if (cnt > 0) {
+                throw new BusinessException("该邮箱已被其他夫君占用");
+            }
+            user.setEmail(email);
+        }
+        if (StringUtils.hasText(request.getPhone())) {
+            String phone = request.getPhone().trim();
+            long cnt = baseMapper.selectCount(new LambdaQueryWrapper<User>()
+                    .eq(User::getPhone, phone)
+                    .ne(User::getId, userId));
+            if (cnt > 0) {
+                throw new BusinessException("该手机号已被其他夫君占用");
+            }
+            user.setPhone(phone);
+        }
+
+        // ---------- 其余字段 ----------
+        if (StringUtils.hasText(request.getNickname())) {
+            user.setNickname(request.getNickname().trim());
+        }
+        if (request.getGender() != null) {
+            if (request.getGender() < 0 || request.getGender() > 2) {
+                throw new BusinessException("性别取值不合法（0-未知 1-男 2-女）");
+            }
+            user.setGender(request.getGender());
+        }
+        if (StringUtils.hasText(request.getBio())) {
+            user.setBio(request.getBio().trim());
+        }
+
+        updateById(user);
+    }
+
+    @Override
+    public void updateAvatar(Long userId, String avatarUrl) {
+        User user = getById(userId);
+        if (user == null) {
+            throw new BusinessException("未找到该用户");
+        }
+        String oldAvatar = user.getAvatar();
+        user.setAvatar(avatarUrl);
+        updateById(user);
+
+        // 清理旧头像文件，避免磁盘残留（更换头像时才有旧文件）
+        if (oldAvatar != null && !oldAvatar.equals(avatarUrl)) {
+            fileUploadService.deleteImageByUrl(oldAvatar);
+        }
+    }
+
+    @Override
+    public String changePassword(Long userId, PasswordChangeRequest request) {
+        User user = getById(userId);
+        if (user == null) {
+            throw new BusinessException("未找到该用户");
+        }
+
+        // 校验原密码（账号不存在与密码错误提示一致，避免名讳被试探）
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw new BusinessException("原密码不正确");
+        }
+        // 新密码不能与旧密码相同
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new BusinessException("新密码不能与旧密码相同");
+        }
+        if (request.getNewPassword().length() < 6) {
+            throw new BusinessException("新密码至少 6 位");
+        }
+
+        // 自增令牌版本号：旧 token 立即失效
+        Long newVer = (user.getTokenVersion() == null ? 0L : user.getTokenVersion()) + 1;
+        user.setTokenVersion(newVer);
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        updateById(user);
+
+        // 返回携带新版本号的新 token，前端无缝续期登录态
+        return jwtService.generateToken(user.getId(), user.getUsername(), newVer);
+    }
+
+    @Override
+    public void logout(Long userId) {
+        User user = getById(userId);
+        if (user == null) {
+            throw new BusinessException("未找到该用户");
+        }
+        // 自增令牌版本号：当前 token 立即失效（多端会一并失效，符合演示预期）
+        Long newVer = (user.getTokenVersion() == null ? 0L : user.getTokenVersion()) + 1;
+        user.setTokenVersion(newVer);
+        updateById(user);
     }
 }

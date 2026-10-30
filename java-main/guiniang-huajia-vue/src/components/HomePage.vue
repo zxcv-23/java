@@ -7,7 +7,7 @@ import BannerCarousel from './BannerCarousel.vue'
 const props = defineProps({
   user: { type: Object, default: null }
 })
-const emit = defineEmits(['logout', 'goAdmin'])
+const emit = defineEmits(['logout', 'goAdmin', 'goProfile'])
 
 // ---------- 接口地址 ----------
 const API_BASE = 'http://127.0.0.1:8081'
@@ -44,6 +44,11 @@ function onLogout() {
 // 进入后台管理系统（点击导航栏「后台管理」）
 function goAdmin() {
   emit('goAdmin')
+}
+
+// 进入个人中心（点击导航栏「个人中心」）
+function goProfile() {
+  emit('goProfile')
 }
 
 // ---------- 首页数据（展示功能） ----------
@@ -218,6 +223,10 @@ function onHotTag(tag) {
 
       <button class="nav-admin" type="button" @click="goAdmin" title="进入后台管理系统">
         <span class="admin-ico">🛡️</span> 后台管理
+      </button>
+
+      <button class="nav-profile" type="button" @click="goProfile" title="进入个人中心">
+        <span class="profile-ico">💞</span> 个人中心
       </button>
 
       <div class="nav-user">
@@ -442,6 +451,24 @@ function onHotTag(tag) {
   animation:shimmer 5s linear infinite; opacity:0; transition:opacity .25s;
 }
 .nav-admin:hover::after{ opacity:.3; }
+
+/* ---------- 个人中心入口按钮（与后台管理相邻，改用主站粉金描边区分） ---------- */
+.nav-profile{
+  position:relative; display:flex; align-items:center; gap:6px; overflow:hidden;
+  border:1px solid rgba(255,179,200,.75); cursor:pointer;
+  color:#fff; font-size:13px; letter-spacing:1px; font-family:inherit;
+  padding:8px 16px; border-radius:999px; transition:.22s var(--ease-out); white-space:nowrap;
+  background:linear-gradient(180deg, rgba(255,143,180,.46), rgba(232,74,120,.46));
+  box-shadow:0 4px 14px rgba(232,74,120,.38), inset 0 1px 0 rgba(255,255,255,.18);
+}
+.nav-profile:hover{ color:#fff; background:linear-gradient(180deg,#FF8FB4,#E84A78); box-shadow:0 6px 18px rgba(232,74,120,.55); }
+.nav-profile .profile-ico{ font-size:14px; }
+.nav-profile::after{
+  content:""; position:absolute; inset:0; border-radius:999px;
+  background:var(--sheen); background-size:220% 100%;
+  animation:shimmer 5s linear infinite; opacity:0; transition:opacity .25s;
+}
+.nav-profile:hover::after{ opacity:.3; }
 .user-chip{
   display:flex; align-items:center; gap:8px;
   padding:5px 12px 5px 6px; border-radius:999px;

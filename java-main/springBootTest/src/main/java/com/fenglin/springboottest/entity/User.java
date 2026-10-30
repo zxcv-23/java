@@ -28,6 +28,21 @@ public class User {
     /** 头像地址 */
     private String avatar;
 
+    /** 邮箱 */
+    private String email;
+
+    /** 手机号 */
+    private String phone;
+
+    /** 性别：0-未知 1-男 2-女 */
+    private Integer gender;
+
+    /** 个性签名 / 简介 */
+    private String bio;
+
+    /** 令牌版本：修改密码 / 登出时自增，使旧 token 立即失效 */
+    private Long tokenVersion;
+
     /** 账号状态：1-正常 0-禁用 */
     private Integer status;
 

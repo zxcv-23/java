@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>个人中心 · 鬼娘花嫁</title>
+  <style>
+    :root {
+      --rose: #c0392b;
+      --rose-soft: #e8a598;
+      --gold: #d4af37;
+      --bg: #fbf6f2;
+      --card: #ffffff;
+      --ink: #3a2e2b;
+      --muted: #9b8a85;
+      --line: #efe2dc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #fdf3ee 0%, #f6e7e0 100%);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+    .wrap { width: 100%; max-width: 720px; }
+    .card {
+      background: var(--card);
+      border-radius: 18px;
+      box-shadow: 0 12px 40px rgba(192, 57, 43, 0.10);
+      padding: 28px;
+      margin-bottom: 18px;
+      border: 1px solid var(--line);
+    }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    h2 { font-size: 16px; margin: 0 0 16px; color: var(--rose); }
+    .sub { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .tab {
+      flex: 1; text-align: center; padding: 10px; cursor: pointer;
+      border-radius: 10px; background: #f7ede9; color: var(--muted); font-size: 14px;
+    }
+    .tab.active { background: var(--rose); color: #fff; font-weight: 600; }
+    label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 6px; }
+    input, textarea, select {
+      width: 100%; padding: 11px 12px; border: 1px solid var(--line);
+      border-radius: 10px; font-size: 14px; background: #fffdfc; color: var(--ink);
+      outline: none; transition: border-color .15s;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--rose-soft); }
+    textarea { resize: vertical; min-height: 70px; }
+    button {
+      cursor: pointer; border: none; border-radius: 10px; font-size: 14px;
+      padding: 11px 18px; font-weight: 600; transition: opacity .15s, transform .05s;
+    }
+    button:active { transform: translateY(1px); }
+    .btn-primary { background: var(--rose); color: #fff; }
+    .btn-primary:hover { opacity: .92; }
+    .btn-ghost { background: #f3e6e1; color: var(--rose); }
+    .btn-row { display: flex; gap: 10px; margin-top: 18px; }
+    .btn-row button { flex: 1; }
+    .avatar-box { display: flex; align-items: center; gap: 18px; margin-bottom: 8px; }
+    .avatar {
+      width: 92px; height: 92px; border-radius: 50%; object-fit: cover;
+      border: 3px solid var(--rose-soft); background: #f3e6e1;
+    }
+    .avatar-default {
+      display: flex; align-items: center; justify-content: center;
+      font-size: 34px; color: var(--rose); font-weight: 700;
+    }
+    .field-row { display: flex; gap: 14px; }
+    .field-row > div { flex: 1; }
+    .msg { font-size: 13px; margin: 4px 0 0; min-height: 18px; }
+    .msg.ok { color: #2e8b57; }
+    .msg.err { color: var(--rose); }
+    .topbar { display: flex; justify-content: space-between; align-items: center; }
+    .logout { background: transparent; color: var(--muted); font-weight: 500; padding: 6px 10px; }
+    .hidden { display: none !important; }
+    .pill { display: inline-block; font-size: 12px; color: var(--muted); background: #f5ece8; padding: 3px 10px; border-radius: 20px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ========== 登录 / 注册 ========== -->
+  <div id="authView" class="card">
+    <h1>鬼娘花嫁 · 个人中心</h1>
+    <p class="sub">登录后即可管理你的头像与资料</p>
+    <div class="tabs">
+      <div class="tab active" data-tab="login" onclick="switchTab('login')">登录</div>
+      <div class="tab" data-tab="register" onclick="switchTab('register')">注册</div>
+    </div>
+
+    <div id="loginForm">
+      <label>夫君名讳（用户名）</label>
+      <input id="loginAccount" placeholder="请输入用户名" />
+      <label>结契暗语（密码）</label>
+      <input id="loginPwd" type="password" placeholder="请输入密码" />
+      <div class="msg" id="loginMsg"></div>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="doLogin()">登 录</button>
+      </div>
+    </div>
+
+    <div id="registerForm" class="hidden">
+      <label>夫君名讳（2~20 位中文/字母/数字/下划线）</label>
+      <input id="regUser" placeholder="设置用户名" />
+      <label>结契暗语（6~32 位）</label>
+      <input id="regPwd" type="password" placeholder="设置密码" />
+      <div class="msg" id="regMsg"></div>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="doRegister()">结 契 注 册</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 个人中心 ========== -->
+  <div id="centerView" class="card hidden">
+    <div class="topbar">
+      <div>
+        <h1 id="centerName">个人中心</h1>
+        <span class="pill" id="centerUser"></span>
+      </div>
+      <button class="logout" onclick="doLogout()">退出</button>
+    </div>
+
+    <!-- 头像 -->
+    <h2 style="margin-top:22px;">头像</h2>
+    <div class="avatar-box">
+      <img id="avatarImg" class="avatar hidden" alt="头像" />
+      <div id="avatarPh" class="avatar avatar-default">?</div>
+      <div>
+        <input id="avatarFile" type="file" accept="image/*" />
+        <div class="msg" id="avatarMsg"></div>
+        <button class="btn-ghost" style="margin-top:8px;" onclick="uploadAvatar()">上传头像</button>
+      </div>
+    </div>
+
+    <!-- 资料 -->
+    <h2>基本资料</h2>
+    <div class="field-row">
+      <div>
+        <label>昵称</label>
+        <input id="nickname" placeholder="昵称" />
+      </div>
+      <div>
+        <label>性别</label>
+        <select id="gender">
+          <option value="0">未知</option>
+          <option value="1">男</option>
+          <option value="2">女</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div>
+        <label>邮箱</label>
+        <input id="email" placeholder="you@example.com" />
+      </div>
+      <div>
+        <label>手机号</label>
+        <input id="phone" placeholder="手机号" />
+      </div>
+    </div>
+    <label>个性签名</label>
+    <textarea id="bio" placeholder="写一句话介绍自己吧～"></textarea>
+    <div class="msg" id="profileMsg"></div>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="saveProfile()">保存资料</button>
+    </div>
+
+    <!-- 修改密码 -->
+    <h2 style="margin-top:26px;">修改密码</h2>
+    <label>原密码</label>
+    <input id="oldPwd" type="password" placeholder="请输入原密码" />
+    <label>新密码（至少 6 位）</label>
+    <input id="newPwd" type="password" placeholder="请输入新密码" />
+    <div class="msg" id="pwdMsg"></div>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="changePwd()">更新密码</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const LS_USER = "pc_user";
+  const LS_TOKEN = "pc_token";
+  const $ = (id) => document.getElementById(id);
+
+  function setMsg(el, text, ok) {
+    el.textContent = text;
+    el.className = "msg " + (ok === undefined ? "" : (ok ? "ok" : "err"));
+  }
+
+  async function api(method, url, body, isForm) {
+    const token = localStorage.getItem(LS_TOKEN);
+    const opt = { method, headers: {} };
+    if (token) opt.headers["Authorization"] = "Bearer " + token;
+    if (body !== undefined) {
+      if (isForm) {
+        opt.body = body; // FormData
+      } else {
+        opt.headers["Content-Type"] = "application/json";
+        opt.body = JSON.stringify(body);
+      }
+    }
+    const res = await fetch(url, opt);
+    const data = await res.json().catch(() => ({}));
+    // 凭证失效：清空登录态并回到登录页
+    if (res.status === 401) {
+      logout();
+    }
+    return data;
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll(".tab").forEach(t =>
+      t.classList.toggle("active", t.dataset.tab === tab));
+    $("loginForm").classList.toggle("hidden", tab !== "login");
+    $("registerForm").classList.toggle("hidden", tab !== "register");
+  }
+
+  async function doLogin() {
+    const account = $("loginAccount").value.trim();
+    const password = $("loginPwd").value;
+    if (!account || !password) return setMsg($("loginMsg"), "请填写用户名和密码", false);
+    const r = await api("POST", "/api/user/login", { account, password });
+    if (r.code === 200) {
+      localStorage.setItem(LS_USER, JSON.stringify(r.data));
+      localStorage.setItem(LS_TOKEN, r.data.token);
+      enterCenter(r.data);
+    } else {
+      setMsg($("loginMsg"), r.message || "登录失败", false);
+    }
+  }
+
+  async function doRegister() {
+    const username = $("regUser").value.trim();
+    const password = $("regPwd").value;
+    if (!username || !password) return setMsg($("regMsg"), "请填写用户名和密码", false);
+    const r = await api("POST", "/api/user/register", { username, password });
+    if (r.code === 200) {
+      setMsg($("regMsg"), "注册成功，正在自动登录…", true);
+      $("loginAccount").value = username;
+      $("loginPwd").value = password;
+      await doLogin();
+    } else {
+      setMsg($("regMsg"), r.message || "注册失败", false);
+    }
+  }
+
+  function enterCenter(user) {
+    $("authView").classList.add("hidden");
+    $("centerView").classList.remove("hidden");
+    $("centerName").textContent = user.nickname || user.username || "个人中心";
+    $("centerUser").textContent = "@" + user.username;
+    if (user.avatar) showAvatar(user.avatar);
+    loadProfile();
+  }
+
+  function showAvatar(url) {
+    $("avatarImg").src = url;
+    $("avatarImg").classList.remove("hidden");
+    $("avatarPh").classList.add("hidden");
+  }
+
+  async function loadProfile() {
+    const r = await api("GET", "/api/profile");
+    if (r.code !== 200) return;
+    const p = r.data;
+    $("nickname").value = p.nickname || "";
+    $("email").value = p.email || "";
+    $("phone").value = p.phone || "";
+    $("gender").value = (p.gender == null ? 0 : p.gender);
+    $("bio").value = p.bio || "";
+    if (p.avatar) showAvatar(p.avatar);
+  }
+
+  async function saveProfile() {
+    const body = {
+      nickname: $("nickname").value.trim(),
+      email: $("email").value.trim(),
+      phone: $("phone").value.trim(),
+      gender: Number($("gender").value),
+      bio: $("bio").value.trim()
+    };
+    const r = await api("PUT", "/api/profile", body);
+    if (r.code === 200) {
+      setMsg($("profileMsg"), "资料已保存 ♥", true);
+      const user = JSON.parse(localStorage.getItem(LS_USER) || "{}");
+      if (body.nickname) {
+        user.nickname = body.nickname;
+        localStorage.setItem(LS_USER, JSON.stringify(user));
+        $("centerName").textContent = body.nickname;
+      }
+    } else if (r.code !== 401) {
+      setMsg($("profileMsg"), r.message || "保存失败", false);
+    }
+  }
+
+  async function uploadAvatar() {
+    const file = $("avatarFile").files[0];
+    if (!file) return setMsg($("avatarMsg"), "请先选择一张图片", false);
+    const form = new FormData();
+    form.append("file", file);
+    const r = await api("POST", "/api/profile/avatar", form, true);
+    if (r.code === 200) {
+      showAvatar(r.data);
+      setMsg($("avatarMsg"), "头像已更新 ♥", true);
+      const user = JSON.parse(localStorage.getItem(LS_USER) || "{}");
+      user.avatar = r.data;
+      localStorage.setItem(LS_USER, JSON.stringify(user));
+    } else if (r.code !== 401) {
+      setMsg($("avatarMsg"), r.message || "上传失败", false);
+    }
+  }
+
+  async function changePwd() {
+    const oldPassword = $("oldPwd").value;
+    const newPassword = $("newPwd").value;
+    if (!oldPassword || !newPassword) return setMsg($("pwdMsg"), "请填写原密码和新密码", false);
+    const r = await api("POST", "/api/profile/password", { oldPassword, newPassword });
+    if (r.code === 200) {
+      setMsg($("pwdMsg"), "密码已修改", true);
+      $("oldPwd").value = ""; $("newPwd").value = "";
+      localStorage.setItem(LS_TOKEN, r.data); // 用返回的新 token 续期登录态
+    } else if (r.code !== 401) {
+      setMsg($("pwdMsg"), r.message || "修改失败", false);
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem(LS_USER);
+    localStorage.removeItem(LS_TOKEN);
+    $("centerView").classList.add("hidden");
+    $("authView").classList.remove("hidden");
+  }
+
+  // 主动登出：通知后端使 token 失效（best-effort），再清理本地登录态
+  async function doLogout() {
+    try { await api("POST", "/api/profile/logout"); } catch (e) { /* 即使失败也清理本地 */ }
+    logout();
+  }
+
+  // 启动：若已登录（有 token）则直接进入
+  (function init() {
+    const user = localStorage.getItem(LS_USER);
+    const token = localStorage.getItem(LS_TOKEN);
+    if (user && token) {
+      try { enterCenter(JSON.parse(user)); } catch (e) { logout(); }
+    }
+  })();
+</script>
+</body>
+</html>

@@ -20,6 +20,9 @@ public class LoginResponse {
     /** 头像地址 */
     private String avatar;
 
+    /** 登录凭证（JWT），后续请求通过 Authorization: Bearer <token> 携带 */
+    private String token;
+
     public static LoginResponse from(User user) {
         LoginResponse resp = new LoginResponse();
         resp.setId(user.getId());

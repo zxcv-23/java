@@ -51,6 +51,10 @@ CREATE TABLE IF NOT EXISTS `user` (
   `password`     VARCHAR(100) NOT NULL                COMMENT '结契暗语/密码(BCrypt加密存储)',
   `nickname`     VARCHAR(50)  DEFAULT NULL            COMMENT '昵称',
   `avatar`       VARCHAR(255) DEFAULT NULL            COMMENT '头像地址',
+  `email`        VARCHAR(100) DEFAULT NULL            COMMENT '邮箱',
+  `phone`        VARCHAR(20)  DEFAULT NULL            COMMENT '手机号',
+  `gender`       TINYINT      NOT NULL DEFAULT 0      COMMENT '性别：0-未知 1-男 2-女',
+  `bio`          VARCHAR(255) DEFAULT NULL            COMMENT '个性签名/简介',
   `status`       TINYINT      NOT NULL DEFAULT 1      COMMENT '账号状态：1-正常 0-禁用',
   `create_time`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -97,3 +101,31 @@ CREATE TABLE IF NOT EXISTS `admin` (
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_general_ci
   COMMENT='后台管理员表';
+
+-- ============================================================
+-- 个人中心：用户表扩展字段（幂等迁移，仅当列不存在时添加）
+-- 适用于「旧库已有 user 表、但缺少新列」的升级场景；全新库由上面的 CREATE 已包含。
+-- ============================================================
+DROP PROCEDURE IF EXISTS `migrate_user_profile`;
+DELIMITER $$
+CREATE PROCEDURE `migrate_user_profile`()
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user' AND COLUMN_NAME = 'email') THEN
+    ALTER TABLE `user` ADD COLUMN `email` VARCHAR(100) DEFAULT NULL COMMENT '邮箱';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user' AND COLUMN_NAME = 'phone') THEN
+    ALTER TABLE `user` ADD COLUMN `phone` VARCHAR(20) DEFAULT NULL COMMENT '手机号';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user' AND COLUMN_NAME = 'gender') THEN
+    ALTER TABLE `user` ADD COLUMN `gender` TINYINT NOT NULL DEFAULT 0 COMMENT '性别：0-未知 1-男 2-女';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user' AND COLUMN_NAME = 'bio') THEN
+    ALTER TABLE `user` ADD COLUMN `bio` VARCHAR(255) DEFAULT NULL COMMENT '个性签名/简介';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user' AND COLUMN_NAME = 'token_version') THEN
+    ALTER TABLE `user` ADD COLUMN `token_version` BIGINT NOT NULL DEFAULT 0 COMMENT '令牌版本：改密/登出时自增，使旧token失效';
+  END IF;
+END$$
+DELIMITER ;
+CALL `migrate_user_profile`();
+DROP PROCEDURE IF EXISTS `migrate_user_profile`;
