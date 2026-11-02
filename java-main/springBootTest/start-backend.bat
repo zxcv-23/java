@@ -40,19 +40,21 @@ if not exist "%MYSQL%" (
 "%MYSQL%" -uroot -p123456 -e "USE guiniang;" >nul 2>&1
 if errorlevel 1 goto :INITDB
 
-REM 库已存在, 检查是否为旧版表结构 (旧表含 email 列, 与当前代码不匹配, 注册会报 500)
-set "OLDCNT="
-for /f %%A in ('"%MYSQL%" -uroot -p123456 -N -e "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='guiniang' AND TABLE_NAME='user' AND COLUMN_NAME='email';" 2^>nul') do set "OLDCNT=%%A"
-if not defined OLDCNT goto :DBOK
-if "%OLDCNT%"=="0" goto :DBOK
+REM 库已存在: 检查 user 表字段是否与 entity/User.java 一致
+REM 缺列时自动执行 sql\fix_user_table.sql 补齐(幂等, 不删除任何数据)
+set "COLCNT="
+for /f %%A in ('"%MYSQL%" -uroot -p123456 -N -e "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='guiniang' AND TABLE_NAME='user' AND COLUMN_NAME IN ('email','phone','gender','bio','token_version');" 2^>nul') do set "COLCNT=%%A"
+if not defined COLCNT goto :DBOK
+if "%COLCNT%"=="5" goto :DBOK
 
-echo [数据库] 检测到旧版表结构(含 email 列), 与当前代码不匹配, 注册会失败。
-set "CONFIRM="
-set /p "CONFIRM=是否删除并重建 guiniang 库? (将清空全部用户数据, 输入 Y 确认): "
-if /i not "%CONFIRM%"=="Y" (
-    echo [跳过] 未重建数据库, 注册接口可能报错。
-    goto :CHECKJAR
+echo [数据库] user 表缺少字段, 当前 %COLCNT%/5, 正在自动补齐 ...
+if exist "sql\fix_user_table.sql" (
+    "%MYSQL%" -uroot -p123456 < "sql\fix_user_table.sql" >nul 2>&1
+    echo [数据库] 字段已补齐, 原有数据未改动
+) else (
+    echo [警告] 未找到 sql\fix_user_table.sql, 登录可能继续报错
 )
+goto :CHECKJAR
 
 :INITDB
 echo [数据库] 正在执行 sql\init.sql 建库建表 ...

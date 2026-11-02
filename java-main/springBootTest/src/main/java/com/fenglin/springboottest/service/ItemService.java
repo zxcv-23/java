@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.fenglin.springboottest.dto.HomeVO;
 import com.fenglin.springboottest.dto.ItemManageVO;
 import com.fenglin.springboottest.dto.ItemSearchVO;
+import com.fenglin.springboottest.dto.ItemUpdateRequest;
 import com.fenglin.springboottest.entity.Item;
 
 import java.util.List;
@@ -45,4 +46,37 @@ public interface ItemService extends IService<Item> {
      * @return 管理条目列表
      */
     List<ItemManageVO> manageList(String keyword, Long categoryId);
+
+    /**
+     * 后台修改条目：按 ID 更新标题/描述/图标/标签/正文/作者/分类/状态
+     *
+     * @param id      条目ID
+     * @param request 修改内容（status 为空则保持原状态）
+     * @return 修改后的最新条目（供前端回显）
+     */
+    ItemManageVO update(Long id, ItemUpdateRequest request);
+
+    /**
+     * 后台新增条目：标题必填，其余字段可选（缺省为未分类 / 上线 / 空串）
+     *
+     * @param request 新增内容
+     * @return 新建的最新条目（含自增 ID，供前端直接插入列表）
+     */
+    ItemManageVO create(ItemUpdateRequest request);
+
+    /**
+     * 后台上下线：只改 status，不动其他字段
+     *
+     * @param id     条目ID
+     * @param status 1-上线 0-下线
+     * @return 修改后的最新条目
+     */
+    ItemManageVO changeStatus(Long id, Integer status);
+
+    /**
+     * 后台删除条目（逻辑删除：deleted 置 1，数据仍在库中，可人工恢复）
+     *
+     * @param id 条目ID
+     */
+    void remove(Long id);
 }

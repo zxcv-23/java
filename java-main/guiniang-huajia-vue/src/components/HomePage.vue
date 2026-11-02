@@ -1,11 +1,13 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import HeroCrest from './HeroCrest.vue'
 import BannerCarousel from './BannerCarousel.vue'
 
 // 登录后由父组件传入的当前用户（来自 localStorage/sessionStorage 的 guiniang_user）
 const props = defineProps({
-  user: { type: Object, default: null }
+  user: { type: Object, default: null },
+  // 由 App.vue 传入的一次性提示（例如「资料已保存」），显示后即失效
+  flashMsg: { type: String, default: '' }
 })
 const emit = defineEmits(['logout', 'goAdmin', 'goProfile'])
 
@@ -33,10 +35,27 @@ function goNav(item) {
   railOpen.value = false
 }
 
-// 当前夫君名讳（优先取后端返回的 account / username / name）
-const userName = props.user
-  ? (props.user.account || props.user.username || props.user.name || '夫君')
-  : '夫君'
+// 当前夫君名讳（优先用昵称，其次是登录名，资料一改导航栏立刻跟着变）
+const userName = computed(() => {
+  const u = props.user
+  if (!u) return '夫君'
+  return u.nickname || u.account || u.username || u.name || '夫君'
+})
+
+// 当前头像（后端返回 /uploads/xxx.jpg 需补上后端域名；没有头像则回落到花）
+const userAvatar = computed(() => {
+  const a = props.user && props.user.avatar
+  if (!a) return ''
+  return a.startsWith('http') ? a : API_BASE + a
+})
+
+// 从个人中心保存资料跳回来时，在页面上给出一次提示
+watch(
+  () => props.flashMsg,
+  (msg) => { if (msg) flashToast(msg) },
+  { immediate: true }
+)
+
 function onLogout() {
   emit('logout')
 }
@@ -231,7 +250,10 @@ function onHotTag(tag) {
 
       <div class="nav-user">
         <span class="user-chip" title="当前夫君">
-          <span class="user-avatar">🌹</span>
+          <span class="user-avatar">
+            <img v-if="userAvatar" :src="userAvatar" alt="头像" />
+            <template v-else>🌹</template>
+          </span>
           <span class="user-name">{{ userName }}</span>
         </span>
         <button class="logout" type="button" @click="onLogout">退 出</button>
@@ -477,7 +499,9 @@ function onHotTag(tag) {
 .user-avatar{
   width:28px; height:28px; display:grid; place-items:center; border-radius:50%;
   background:linear-gradient(180deg,#FF8FB4,#E84A78); font-size:15px;
+  overflow:hidden; flex:0 0 28px;
 }
+.user-avatar img{ width:100%; height:100%; object-fit:cover; display:block; }
 .user-name{ font-size:13px; color:var(--ivory); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .logout{
   border:1px solid rgba(255,179,200,.5); background:transparent; color:var(--rose);

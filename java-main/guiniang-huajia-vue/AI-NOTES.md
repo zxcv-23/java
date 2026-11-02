@@ -29,3 +29,10 @@
 ```bash
 curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5173/   # 应为 200
 ```
+
+## 页面路由（无 vue-router）
+- 全部切换由 `src/App.vue` 的 `mode` 状态机控制：`login | register | home | admin-login | admin | profile`，用 `<transition name="swap">` 做过渡。
+- 登录态存在 `localStorage/sessionStorage` 的 `guiniang_user`（含 token），刷新后 `onMounted` 自动回 home。
+- **个人中心保存资料的跳转链路**（2026-11 新增）：
+  `PersonalCenter` 保存成功 → `emit('saved', {nickname, avatar})` → `App.profileSaved()` 合并进 `currentUser` 并 `persistUser()` 写回存储 → 900ms 后 `mode='home'` → `App.homeFlash` 通过 `:flash-msg` 传给 `HomePage`，由 `watch(flashMsg, {immediate:true})` 调 `flashToast` 展示一次。
+  注意：`HomePage` 的 `userName` / `userAvatar` 是 `computed`，改 `props.user` 会即时反映到导航栏，不要把二者改回 setup 常量。

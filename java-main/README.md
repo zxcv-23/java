@@ -29,7 +29,7 @@
 **后端 `start-backend.bat`：**
 1. 清除 `SERVER__PORT` / `SERVER__HOST` 环境变量 —— 防止外部环境变量通过 Spring 宽松绑定覆盖配置文件里的 `server.port=8081`
 2. 结束占用 8081 端口的旧进程，避免端口冲突
-3. 检查 MySQL `guiniang` 库：不存在则自动执行 `sql\init.sql` 建库建表；若检测到**旧版表结构**（含 email 列）会提示是否重建
+3. 检查 MySQL `guiniang` 库：不存在则自动执行 `sql\init.sql` 建库建表；`user` 表缺字段（email / phone / gender / bio / token_version）时自动执行 `sql\fix_user_table.sql` 补齐，**不删除任何数据**
 4. `target\springBootTest-0.0.1-SNAPSHOT.jar` 不存在时自动用 Maven 构建（跳过测试）；Maven 按顺序查找：`~/.m2/wrapper/dists` 缓存 → PATH 中的 `mvn` → 项目自带 `mvnw.cmd`
 5. 以 `--server.port=8081` 显式启动（双保险）
 
@@ -63,7 +63,7 @@ npm run dev
 
 - **后端启动报端口被占 / 端口不是 8081**：启动前环境里有 `SERVER__PORT` 变量（脚本已自动清除）。手动启动时先执行 `set SERVER__PORT=`（cmd）或 `unset SERVER__PORT`（Git Bash）
 - **Git Bash 里 `mvn` / `mvnw` 报 "Unable to access jarfile"**：Git Bash 把 Unix 路径传给了 Windows 版 java，属已知兼容问题，请改用本脚本的 `.bat` 方式
-- **注册接口报 500（Field 'email' doesn't have a default value）**：数据库里是旧版表结构，运行 `start-backend.bat` 按提示重建，或手动执行：`mysql -uroot -p123456 -e "DROP DATABASE guiniang;"` 然后导入 `sql\init.sql`
+- **注册成功但点「缔结婚约」没反应 / 提示「结契失败，请稍后再试」**：多数是 `user` 表缺字段（`Unknown column 'email'` 导致登录 500）。执行 `mysql -uroot -p123456 < springBootTest\sql\fix_user_table.sql` 补齐字段即可，**不需要删库**；也可以直接重跑 `start-backend.bat`（会自动补齐）
 - **前端页面打开但注册/登录无响应**：后端没启动，先跑 `start-backend.bat`
 - **改了后端代码**：删掉 `target\springBootTest-0.0.1-SNAPSHOT.jar` 再跑脚本即可触发重新构建
 - **电脑重置后（target / node_modules 被删）**：直接双击脚本即可，会自动重新构建 / 重装依赖

@@ -1,12 +1,13 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 
 // 个人资料编辑页：进入即直接编辑当前夫君的资料，上传头像，修改密码。
 // 鉴权沿用前台登录时已下发的 JWT（guiniang_user.token），直接调后端 /api/profile。
 const props = defineProps({
   user: { type: Object, default: null }
 })
-const emit = defineEmits(['back', 'logout', 'tokenRefreshed', 'needLogin'])
+// saved：保存资料成功后抛给父组件，由 App.vue 同步登录态并跳回首页
+const emit = defineEmits(['back', 'logout', 'tokenRefreshed', 'needLogin', 'saved'])
 
 const API_BASE = 'http://127.0.0.1:8081'
 
@@ -18,6 +19,7 @@ const notice = ref('')
 const profile = ref(null)
 
 const saving = ref(false)
+const saved = ref(false)   // 保存成功到跳转之间的过渡态
 const form = ref({ nickname: '', email: '', phone: '', gender: 0, bio: '' })
 
 const uploading = ref(false)
@@ -82,6 +84,9 @@ function fillForm(p) {
   }
 }
 
+// 再次编辑时解除「已保存」锁，允许重新保存
+watch(form, () => { saved.value = false }, { deep: true })
+
 // ---------- 保存资料 ----------
 async function saveProfile() {
   if (!token.value) return
@@ -106,7 +111,13 @@ async function saveProfile() {
     const json = await res.json()
     if (json.code === 200) {
       profile.value = { ...profile.value, ...body }
-      flash('资料已更新 ♥')
+      saved.value = true
+      flash('资料已更新 ♥ 正在带你回首页…')
+      // 把最新昵称/头像交给 App.vue：写入本地登录态并跳回首页，导航栏立刻显示新资料
+      emit('saved', {
+        nickname: profile.value.nickname || '',
+        avatar: profile.value.avatar || ''
+      })
     } else if (res.status === 401) {
       notice.value = '登录已失效，请重新缔结婚约后再来编辑资料。'
     } else {
@@ -292,8 +303,8 @@ onMounted(loadProfile)
             <textarea id="f-bio" v-model="form.bio" maxlength="200" rows="3" placeholder="写下你与花娘的誓言（≤200字）"></textarea>
           </div>
 
-          <button class="btn" type="submit" :disabled="saving">
-            {{ saving ? '正在落笔…' : '保 存 资 料' }}
+          <button class="btn" type="submit" :disabled="saving || saved">
+            {{ saved ? '已 保 存 · 正 在 回 首 页…' : (saving ? '正在落笔…' : '保 存 资 料') }}
           </button>
         </form>
 

@@ -88,4 +88,14 @@ public interface ItemMapper extends BaseMapper<Item> {
             "ORDER BY i.id DESC LIMIT 200" +
             "</script>")
     List<ItemManageVO> manageList(@Param("keyword") String keyword, @Param("categoryId") Long categoryId);
+
+    /**
+     * 后台查询单条：按 ID 取一条未删除条目（编辑保存后回显用）。
+     */
+    @Select("SELECT i.id, i.emoji, i.title, i.description AS `desc`, i.tag, i.content, i.author, i.status, " +
+            "       i.category_id AS categoryId, c.name AS categoryName " +
+            "FROM item i " +
+            "LEFT JOIN category c ON c.id = i.category_id " +
+            "WHERE i.deleted = 0 AND i.id = #{id}")
+    ItemManageVO manageItem(@Param("id") Long id);
 }

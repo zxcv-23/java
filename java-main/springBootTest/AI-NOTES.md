@@ -4,12 +4,13 @@
 
 ## 项目概况
 - Spring Boot 3.4 + Java 21 + MyBatis-Plus 3.5.7 + MySQL 8，端口 **8081**，profile=dev
-- 登录/注册小项目（表 `user`），**注意：这是"新版"代码，注册不收集邮箱！** 接口契约：
+- 登录/注册小项目（表 `user`）。**注册只填用户名+密码，但 `User` 实体还有 email/phone/gender/bio/token_version 五个扩展列（个人中心用）**，建表必须带上，否则登录必崩（见下方坑 4）。接口契约：
   - `POST /api/user/register` `{"username","password"}`（用户名 2~20 位，密码 6~32 位，BCrypt）
-  - `POST /api/user/login` `{"account","password"}` → 返回用户信息
-  - `GET /user/test`（自检）
+  - `POST /api/user/login` `{"account","password"}` → 返回用户信息 + JWT
+  - `GET /api/profile`、`PUT /api/profile`、`POST /api/profile/avatar|password|logout`（需 `Authorization: Bearer <token>`）
+  - `GET /api/home`、`GET /api/search`、`GET /user/test`（自检）
 - 已配置 CORS（`config/CorsConfig.java`），前端直连 8081
-- ⚠️ 桌面上还有一份**旧版**项目副本 `Desktop\java-main\guiniang-huajia-vue\springBootTest`（注册带 email 字段）。本目录 `java-main\java-main\java-main\springBootTest` 才是当前版本，两份代码和 init.sql 均不同，勿混淆。
+- 当前版本路径：`D:\workSpace\java\java-main\springBootTest`（前端同级 `guiniang-huajia-vue`）
 
 ## 环境事实（已验证）
 - Java 21: `C:\Program Files\Zulu\zulu-21`（PATH 里的 java 也可用）
@@ -23,7 +24,12 @@
 1. **环境变量 `SERVER__PORT` / `SERVER__HOST` 会覆盖 `server.port`**（Spring 宽松绑定）。启动前必须清除，否则 Tomcat 抢别的端口启动失败。`start-backend.bat` 已自动处理。
 2. **Git Bash 里 `mvn`/`mvnw` 报 "Unable to access jarfile"**——Git Bash 把 `/c/...` 路径传给 Windows java。解决：用 `.bat`（PowerShell 里 `& .\start-backend.bat` 可跑通），或 `cygpath -w` 转换路径后直接调 classworlds 启动器。
 3. **MyBatis-Spring 兼容性**：pom 已锁 `mybatis-spring` 3.0.6（3.0.3 与 Spring Boot 3.4 不兼容）。不要降级。
-4. **数据库 schema 漂移**：若 `user` 表是旧结构（含 `email NOT NULL`），注册报 500 `Field 'email' doesn't have a default value`。修复：DROP 库后重跑 `sql/init.sql`。`start-backend.bat` 会自动检测并提示重建。
+4. **数据库 schema 漂移（本项目最容易踩的坑）**：`entity/User.java` 有 13 个字段，`user` 表必须全都有。缺 `email`/`phone`/`gender`/`bio`/`token_version` 时：
+   - **注册能成功**（MyBatis-Plus 插入只写非 null 字段，看不出来）
+   - **登录必 500**：`Unknown column 'email' in 'field list'`（selectOne 查全字段）
+   - 前端 `GlobalExceptionHandler` 没兜住非业务异常，页面只显示「结契失败，请稍后再试」，**看不到真实原因**——排查时直接看后端控制台或自己 curl 一次登录接口
+   - 修复：执行 `sql\fix_user_table.sql`（幂等、不删数据，只补缺失列），**不要 DROP 库**。`start-backend.bat` 已改为检测这 5 个列并自动补齐。
+   - 判定"新旧版本"不能再只看 email 列是否存在——现在正确结构**本来就该有** email。
 5. **沙箱限制**：AI 环境里 Bash/PowerShell 都禁止直接调 `cmd.exe`，但 PowerShell 允许 `& .\xxx.bat` 方式运行批处理。
 
 ## 启动方式（电脑每次重置，target 会被删除）

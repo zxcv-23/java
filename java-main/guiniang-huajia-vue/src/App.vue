@@ -116,6 +116,11 @@ function goHome() {
 function refreshUserToken(newToken) {
   const next = { ...(currentUser.value || {}), token: newToken }
   currentUser.value = next
+  persistUser(next)
+}
+
+// 把登录态写回原来的存储位置（localStorage 优先，其次 sessionStorage）
+function persistUser(next) {
   try {
     const raw = window.localStorage.getItem('guiniang_user')
     if (raw) {
@@ -125,6 +130,22 @@ function refreshUserToken(newToken) {
     const sess = window.sessionStorage.getItem('guiniang_user')
     if (sess) window.sessionStorage.setItem('guiniang_user', JSON.stringify(next))
   } catch { /* 忽略持久化异常 */ }
+}
+
+// 资料保存成功 → 同步昵称/头像到登录态，短暂提示后自动跳回首页
+const homeFlash = ref('')
+let savedTimer = null
+let flashTimer = null
+function profileSaved(patch) {
+  const next = { ...(currentUser.value || {}), ...(patch || {}) }
+  currentUser.value = next
+  persistUser(next)
+  homeFlash.value = '资料已保存，已带你回到首页 ♥'
+  clearTimeout(savedTimer)
+  clearTimeout(flashTimer)
+  savedTimer = setTimeout(() => { mode.value = 'home' }, 900)
+  // 首页提示只显示一次，2.6s 后清掉，避免下次回首页重复弹出
+  flashTimer = setTimeout(() => { homeFlash.value = '' }, 2600)
 }
 
 // 后台登录成功 → 进入后台主界面
@@ -157,10 +178,10 @@ function backToHome() {
   <transition name="swap" mode="out-in">
     <LoginCard v-if="mode === 'login'" key="login" @celebrate="onCelebrate" @switch="mode = 'register'" @loggedIn="goHome" />
     <RegisterCard v-else-if="mode === 'register'" key="register" @celebrate="onCelebrate" @switch="mode = 'login'" @loggedIn="goHome" />
-    <HomePage v-else-if="mode === 'home'" key="home" :user="currentUser" @logout="logout" @goAdmin="goAdmin" @goProfile="goProfile" />
+    <HomePage v-else-if="mode === 'home'" key="home" :user="currentUser" :flash-msg="homeFlash" @logout="logout" @goAdmin="goAdmin" @goProfile="goProfile" />
     <AdminLogin v-else-if="mode === 'admin-login'" key="admin-login" @loggedIn="goAdminHome" @back="backToHome" />
     <AdminDashboard v-else-if="mode === 'admin'" key="admin" :admin="currentAdmin" @logout="adminLogout" @back="backToHome" />
-    <PersonalCenter v-else-if="mode === 'profile'" key="profile" :user="currentUser" @back="backToHome" @logout="logout" @tokenRefreshed="refreshUserToken" @needLogin="profileNeedLogin" />
+    <PersonalCenter v-else-if="mode === 'profile'" key="profile" :user="currentUser" @back="backToHome" @logout="logout" @tokenRefreshed="refreshUserToken" @needLogin="profileNeedLogin" @saved="profileSaved" />
   </transition>
   <HeartLayer ref="heartLayer" />
 </template>
