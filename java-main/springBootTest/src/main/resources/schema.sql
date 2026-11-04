@@ -86,21 +86,26 @@ CREATE TABLE IF NOT EXISTS `banner` (
   COMMENT='首页轮播标语/主题横幅';
 
 -- 后台管理员表（与前台 user 表独立，仅用于后台管理系统登录）
+-- token_version：改密 / 登出时自增，让已签发的后台 token 立即失效
 CREATE TABLE IF NOT EXISTS `admin` (
-  `id`           BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `username`     VARCHAR(50)  NOT NULL                COMMENT '管理员账号',
-  `password`     VARCHAR(100) NOT NULL                COMMENT '登录密码(BCrypt加密存储)',
-  `nickname`     VARCHAR(50)  DEFAULT NULL            COMMENT '昵称',
-  `status`       TINYINT      NOT NULL DEFAULT 1      COMMENT '账号状态：1-正常 0-禁用',
-  `create_time`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  `deleted`      TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0-未删除 1-已删除',
+  `id`            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `username`      VARCHAR(50)  NOT NULL                COMMENT '管理员账号',
+  `password`      VARCHAR(100) NOT NULL                COMMENT '登录密码(BCrypt加密存储)',
+  `nickname`      VARCHAR(50)  DEFAULT NULL            COMMENT '昵称',
+  `status`        TINYINT      NOT NULL DEFAULT 1      COMMENT '账号状态：1-正常 0-禁用',
+  `token_version` BIGINT       NOT NULL DEFAULT 0      COMMENT '令牌版本：改密/登出时自增使旧 token 失效',
+  `create_time`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted`       TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0-未删除 1-已删除',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_admin_username` (`username`)
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_general_ci
   COMMENT='后台管理员表';
+
+-- 旧库（admin 表已存在、缺 token_version）由 AdminServiceImpl 启动时自动幂等补列；
+-- 也可手工执行 sql/fix_admin_table.sql。
 
 -- ============================================================
 -- 个人中心：用户表扩展字段（幂等迁移，仅当列不存在时添加）

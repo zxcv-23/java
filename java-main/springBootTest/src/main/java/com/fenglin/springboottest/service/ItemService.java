@@ -1,10 +1,12 @@
 package com.fenglin.springboottest.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.fenglin.springboottest.common.PageResult;
 import com.fenglin.springboottest.dto.HomeVO;
 import com.fenglin.springboottest.dto.ItemManageVO;
 import com.fenglin.springboottest.dto.ItemSearchVO;
 import com.fenglin.springboottest.dto.ItemUpdateRequest;
+import com.fenglin.springboottest.dto.ManageStatsVO;
 import com.fenglin.springboottest.entity.Item;
 
 import java.util.List;
@@ -39,13 +41,22 @@ public interface ItemService extends IService<Item> {
     HomeVO home();
 
     /**
-     * 后台管理列表：返回全部未删除条目（含已下线），附带分类名称
+     * 后台管理列表（分页）：返回未删除条目或回收站条目，附带分类名称。
      *
-     * @param keyword     关键词（可选，匹配标题/标签）
+     * @param keyword     关键词（可选，匹配标题/标签/描述）
      * @param categoryId  分类ID（可选，精确匹配直接归属分类）
-     * @return 管理条目列表
+     * @param status      状态筛选（可选，1-上线 0-下线；为空表示全部）
+     * @param deleted     true-回收站（已逻辑删除） false-正常条目
+     * @param page        页码，从 1 开始
+     * @param size        每页条数
      */
-    List<ItemManageVO> manageList(String keyword, Long categoryId);
+    PageResult<ItemManageVO> manageList(String keyword, Long categoryId, Integer status,
+                                        boolean deleted, int page, int size);
+
+    /**
+     * 后台概览统计：条目总数 / 上线 / 下线 / 回收站 / 分类数
+     */
+    ManageStatsVO stats();
 
     /**
      * 后台修改条目：按 ID 更新标题/描述/图标/标签/正文/作者/分类/状态
@@ -74,9 +85,16 @@ public interface ItemService extends IService<Item> {
     ItemManageVO changeStatus(Long id, Integer status);
 
     /**
-     * 后台删除条目（逻辑删除：deleted 置 1，数据仍在库中，可人工恢复）
+     * 后台删除条目（逻辑删除：deleted 置 1，数据仍在库中）
      *
      * @param id 条目ID
      */
     void remove(Long id);
+
+    /**
+     * 从回收站恢复逻辑删除的条目
+     *
+     * @return 恢复后的条目（供前端回显）
+     */
+    ItemManageVO restore(Long id);
 }

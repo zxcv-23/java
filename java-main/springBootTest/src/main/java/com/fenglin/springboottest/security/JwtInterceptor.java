@@ -48,6 +48,12 @@ public class JwtInterceptor implements HandlerInterceptor {
         String token = auth.substring(7).trim();
         try {
             JwtService.JwtPayload payload = jwtService.parse(token);
+            // 只接受前台用户凭证：后台管理员 token 的 subject 是管理员ID，
+            // 若放进来可能与同ID的前台用户混淆，必须严格隔离
+            if (!JwtService.SCOPE_USER.equals(payload.scope)) {
+                writeUnauthorized(response, "登录凭证类型不匹配");
+                return false;
+            }
             User user = userMapper.selectById(payload.userId);
             if (user == null) {
                 writeUnauthorized(response, "用户不存在或已被删除");

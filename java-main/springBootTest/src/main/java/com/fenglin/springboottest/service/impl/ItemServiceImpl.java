@@ -1,11 +1,14 @@
 package com.fenglin.springboottest.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fenglin.springboottest.common.PageResult;
 import com.fenglin.springboottest.dto.HomeVO;
 import com.fenglin.springboottest.dto.ItemManageVO;
 import com.fenglin.springboottest.dto.ItemSearchVO;
 import com.fenglin.springboottest.dto.ItemUpdateRequest;
+import com.fenglin.springboottest.dto.ManageStatsVO;
 import com.fenglin.springboottest.entity.Item;
 import com.fenglin.springboottest.exception.BusinessException;
 import com.fenglin.springboottest.mapper.ItemMapper;
@@ -56,8 +59,36 @@ public class ItemServiceImpl extends ServiceImpl<ItemMapper, Item> implements It
     }
 
     @Override
-    public List<ItemManageVO> manageList(String keyword, Long categoryId) {
-        return baseMapper.manageList(keyword, categoryId);
+    public PageResult<ItemManageVO> manageList(String keyword, Long categoryId, Integer status,
+                                               boolean deleted, int page, int size) {
+        // 页码/页大小做边界收敛，避免负数或超大 size 拖垮数据库
+        int safePage = Math.max(1, page);
+        int safeSize = Math.min(Math.max(1, size), 100);
+        long offset = (long) (safePage - 1) * safeSize;
+        String kw = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        Integer deletedFlag = deleted ? 1 : 0;
+
+        long total = baseMapper.manageCount(kw, categoryId, status, deletedFlag);
+        // 翻页越界时回到最后一页，避免用户看到空白页
+        if (total > 0 && offset >= total) {
+            safePage = (int) ((total + safeSize - 1) / safeSize);
+            offset = (long) (safePage - 1) * safeSize;
+        }
+        List<ItemManageVO> list = baseMapper.managePage(kw, categoryId, status,
+                deletedFlag, offset, safeSize);
+        return PageResult.of(list, total, safePage, safeSize);
+    }
+
+    @Override
+    public ManageStatsVO stats() {
+        ManageStatsVO vo = new ManageStatsVO();
+        // @TableLogic 会自动附加 deleted = 0，下面三个计数都只统计未删除条目
+        vo.setTotal(count(new LambdaQueryWrapper<Item>()));
+        vo.setOnline(count(new LambdaQueryWrapper<Item>().eq(Item::getStatus, 1)));
+        vo.setOffline(count(new LambdaQueryWrapper<Item>().eq(Item::getStatus, 0)));
+        vo.setDeleted(baseMapper.countDeleted());
+        vo.setCategories(categoryService.count());
+        return vo;
     }
 
     @Override
@@ -164,5 +195,14 @@ public class ItemServiceImpl extends ServiceImpl<ItemMapper, Item> implements It
         if (!removeById(id)) {
             throw new BusinessException("删除失败，请稍后再试");
         }
+    }
+
+    @Override
+    public ItemManageVO restore(Long id) {
+        int rows = baseMapper.restore(id);
+        if (rows == 0) {
+            throw new BusinessException("此条目不在回收站中（可能已恢复或不存在）");
+        }
+        return baseMapper.manageItem(id);
     }
 }

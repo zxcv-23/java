@@ -28,6 +28,9 @@ public class Admin {
     /** 账号状态：1-正常 0-禁用 */
     private Integer status;
 
+    /** 令牌版本：修改密码 / 登出时自增，使已签发的后台 token 立即失效 */
+    private Long tokenVersion;
+
     /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
