@@ -1,5 +1,6 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { ADMIN_UNAUTHORIZED_EVENT, clearAdmin } from './utils/adminApi'
 import AnimeBackground from './components/AnimeBackground.vue'
 import LoginCard from './components/LoginCard.vue'
 import RegisterCard from './components/RegisterCard.vue'
@@ -47,7 +48,16 @@ onMounted(() => {
     currentUser.value = u
     mode.value = 'home'
   }
+  window.addEventListener(ADMIN_UNAUTHORIZED_EVENT, onAdminUnauthorized)
 })
+onUnmounted(() => window.removeEventListener(ADMIN_UNAUTHORIZED_EVENT, onAdminUnauthorized))
+
+// 后台 JWT 失效（过期 / 已登出 / 被改密 / 账号被禁用）→ 清会话并退回后台登录页
+function onAdminUnauthorized() {
+  clearAdmin()
+  currentAdmin.value = null
+  mode.value = 'admin-login'
+}
 
 // 登录/注册成功后：子组件抛出 celebrate 事件（携带卡片位置），交给爱心雨图层
 function onCelebrate(rect) {
@@ -67,10 +77,12 @@ function logout() {
 // 从首页导航栏「后台管理」进入：已有有效 token 直接进后台，否则进登录页
 function goAdmin() {
   const a = readStoredAdmin()
-  if (a && a.token) {
+  // demo 是旧版「演示身份」残留，不带真实 JWT，必须重新登录
+  if (a && a.token && !a.demo) {
     currentAdmin.value = a
     mode.value = 'admin'
   } else {
+    clearAdmin()
     mode.value = 'admin-login'
   }
 }

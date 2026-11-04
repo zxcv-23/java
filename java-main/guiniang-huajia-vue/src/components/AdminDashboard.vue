@@ -1,9 +1,9 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { adminFetch, clearAdmin, persistAdmin } from '../utils/adminApi'
 
-// 后台主界面：条目管理列表。
-// 数据来自 /api/manage/items（后端接口就绪后自动展示真实数据）；
-// 接口未实现/后端未启动时给出明确提示，不伪造数据。
+// 后台主界面：条目管理 / 回收站 / 账号安全。
+// 所有后台接口统一走 adminApi（自动携带 JWT，401 自动退回登录页）。
 const props = defineProps({
   admin: { type: Object, default: null }
 })
@@ -14,77 +14,123 @@ const API_BASE = 'http://127.0.0.1:8081'
 const adminName = computed(() =>
   (props.admin && (props.admin.name || props.admin.account)) || '判官'
 )
-const isDemo = computed(() => !!(props.admin && props.admin.demo))
 
-// ---------- 列表状态 ----------
+// ---------- 标签页 ----------
+const tab = ref('items')
+const tabs = [
+  { key: 'items', label: '条目管理', icon: '📜' },
+  { key: 'recycle', label: '回收站', icon: '🕯️' },
+  { key: 'account', label: '账号安全', icon: '🔑' }
+]
+const isRecycle = computed(() => tab.value === 'recycle')
+
+function switchTab(key) {
+  if (tab.value === key) return
+  tab.value = key
+  page.value = 1
+  notice.value = ''
+  if (key !== 'account') fetchItems()
+}
+
+// ---------- 列表与分页 ----------
 const keyword = ref('')
 const categoryId = ref('')
+const statusFilter = ref('')
+const page = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+const pages = ref(0)
 const loading = ref(false)
-const loaded = ref(false)     // 至少成功拉取过一次
+const loaded = ref(false)
 const items = ref([])
 const notice = ref('')
 const backendReady = ref(true)
+const stats = ref({ total: 0, online: 0, offline: 0, deleted: 0, categories: 0 })
 
-const total = computed(() => items.value.length)
-const onlineCount = computed(() => items.value.filter(i => i.status === 1).length)
-const offlineCount = computed(() => total.value - onlineCount.value)
+const pageStart = computed(() => total.value ? (page.value - 1) * pageSize.value + 1 : 0)
+const pageEnd = computed(() => Math.min(page.value * pageSize.value, total.value))
+
+function buildQuery() {
+  const p = new URLSearchParams()
+  if (keyword.value.trim()) p.set('keyword', keyword.value.trim())
+  if (categoryId.value) p.set('categoryId', String(categoryId.value))
+  if (statusFilter.value !== '') p.set('status', statusFilter.value)
+  p.set('deleted', isRecycle.value ? 'true' : 'false')
+  p.set('page', String(page.value))
+  p.set('size', String(pageSize.value))
+  return p.toString()
+}
 
 onMounted(() => {
+  verifySession()
+  fetchStats()
   fetchItems()
   fetchCategories()
   window.addEventListener('keydown', onEsc)
 })
 onUnmounted(() => window.removeEventListener('keydown', onEsc))
 
-// Esc 关闭弹窗（保存/删除/新增进行中不打断）
-function onEsc(e) {
-  if (e.key !== 'Escape') return
-  if (showDelete.value) closeDelete()
-  else if (showEdit.value) closeEdit()
-  else if (showCreate.value) closeCreate()
+// 进入后台先自检身份：token 过期/被禁用时 adminFetch 会广播 401
+async function verifySession() {
+  try { await adminFetch('/api/admin/me') } catch (e) { /* 已由请求层处理 */ }
+}
+
+async function fetchStats() {
+  try {
+    const data = await adminFetch('/api/manage/stats')
+    if (data) stats.value = data
+  } catch (e) { /* 统计失败不阻断列表 */ }
 }
 
 async function fetchItems() {
   loading.value = true
   notice.value = ''
   try {
-    const params = new URLSearchParams()
-    if (keyword.value.trim()) params.set('keyword', keyword.value.trim())
-    if (categoryId.value) params.set('categoryId', String(categoryId.value))
-    const res = await fetch(`${API_BASE}/api/manage/items?${params.toString()}`, {
-      headers: { 'Content-Type': 'application/json' }
-    })
-    if (res.ok) {
-      const json = await res.json()
-      if (json.code === 200) {
-        items.value = Array.isArray(json.data) ? json.data : []
-        loaded.value = true
-        backendReady.value = true
-        if (!items.value.length) notice.value = json.message || '生死簿空空如也，尚无条目。'
-        return
-      }
-      notice.value = json.message || '接口返回异常'
-    } else if (res.status === 404) {
-      backendReady.value = false
-      notice.value = '后台管理接口（/api/manage/items）尚未实现，列表暂不可用。待后端补齐后此处将自动展示真实数据。'
-    } else {
-      notice.value = '冥府信道受阻（HTTP ' + res.status + '）'
+    const data = await adminFetch('/api/manage/items?' + buildQuery())
+    items.value = (data && Array.isArray(data.list)) ? data.list : []
+    total.value = data ? Number(data.total || 0) : 0
+    pages.value = data ? Number(data.pages || 0) : 0
+    page.value = data ? Number(data.page || 1) : 1
+    loaded.value = true
+    backendReady.value = true
+    if (!items.value.length) {
+      notice.value = isRecycle.value
+        ? '回收站空空如也，没有被移除的条目。'
+        : '生死簿空空如也，尚无条目。'
     }
   } catch (e) {
     backendReady.value = false
-    notice.value = '冥府信道未通 · 后端未启动，无法载入条目列表。'
+    items.value = []
+    total.value = 0
+    pages.value = 0
+    notice.value = e.message || '无法载入条目列表'
   } finally {
     loading.value = false
   }
 }
 
+function applyFilter() {
+  page.value = 1
+  fetchItems()
+}
 function resetFilter() {
   keyword.value = ''
   categoryId.value = ''
+  statusFilter.value = ''
+  page.value = 1
+  fetchItems()
+}
+function goPage(n) {
+  if (n < 1 || n === page.value || (pages.value && n > pages.value)) return
+  page.value = n
+  fetchItems()
+}
+function onSizeChange() {
+  page.value = 1
   fetchItems()
 }
 
-// 点击涟漪（微微发光的科技感反馈）
+// 点击涟漪
 function spawnRipple(e) {
   const el = e.currentTarget
   if (!el) return
@@ -110,7 +156,7 @@ function flash(msg) {
   toastTimer = setTimeout(() => (toast.value = ''), 2400)
 }
 
-// ---------- 分类下拉（用于编辑时改归属） ----------
+// ---------- 分类下拉 ----------
 const categories = ref([])
 async function fetchCategories() {
   try {
@@ -136,7 +182,8 @@ const showEdit = ref(false)
 const editSaving = ref(false)
 const editError = ref('')
 const editId = ref(null)
-const editForm = ref({ emoji: '', title: '', description: '', tag: '', author: '', categoryId: '', status: 1, content: '' })
+const blankForm = () => ({ emoji: '', title: '', description: '', tag: '', author: '', categoryId: '', status: 1, content: '' })
+const editForm = ref(blankForm())
 
 function openEdit(it) {
   editId.value = it.id
@@ -153,43 +200,35 @@ function openEdit(it) {
   }
   showEdit.value = true
 }
-
 function closeEdit() {
   if (editSaving.value) return
   showEdit.value = false
 }
-
 async function saveEdit() {
   const f = editForm.value
   if (!f.title || !f.title.trim()) { editError.value = '标题不能为空'; return }
   editSaving.value = true
   editError.value = ''
   try {
-    const body = {
-      title: f.title.trim(),
-      description: f.description,
-      emoji: f.emoji,
-      tag: f.tag,
-      author: f.author,
-      content: f.content,
-      categoryId: f.categoryId === '' ? null : Number(f.categoryId),
-      status: Number(f.status)
-    }
-    const res = await fetch(`${API_BASE}/api/manage/items/${editId.value}`, {
+    const data = await adminFetch(`/api/manage/items/${editId.value}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: {
+        title: f.title.trim(),
+        description: f.description,
+        emoji: f.emoji,
+        tag: f.tag,
+        author: f.author,
+        content: f.content,
+        categoryId: f.categoryId === '' ? null : Number(f.categoryId),
+        status: Number(f.status)
+      }
     })
-    const json = await res.json()
-    if (json.code === 200 && json.data) {
-      replaceRow(json.data)
-      showEdit.value = false
-      flash('条目已修改 ♥')
-    } else {
-      editError.value = json.message || '保存失败，请稍后再试'
-    }
+    replaceRow(data)
+    showEdit.value = false
+    fetchStats()
+    flash('条目已修改 ♥')
   } catch (e) {
-    editError.value = '冥府信道未通，保存失败'
+    editError.value = e.message || '保存失败，请稍后再试'
   } finally {
     editSaving.value = false
   }
@@ -199,11 +238,11 @@ async function saveEdit() {
 const showCreate = ref(false)
 const createSaving = ref(false)
 const createError = ref('')
-const createForm = ref({ emoji: '', title: '', description: '', tag: '', author: '', categoryId: '', status: 1, content: '' })
+const createForm = ref(blankForm())
 
 function openCreate() {
   createError.value = ''
-  createForm.value = { emoji: '', title: '', description: '', tag: '', author: '', categoryId: '', status: 1, content: '' }
+  createForm.value = blankForm()
   showCreate.value = true
 }
 function closeCreate() {
@@ -216,31 +255,26 @@ async function saveCreate() {
   createSaving.value = true
   createError.value = ''
   try {
-    const body = {
-      title: f.title.trim(),
-      description: f.description,
-      emoji: f.emoji,
-      tag: f.tag,
-      author: f.author,
-      content: f.content,
-      categoryId: f.categoryId === '' ? null : Number(f.categoryId),
-      status: Number(f.status)
-    }
-    const res = await fetch(`${API_BASE}/api/manage/items`, {
+    await adminFetch('/api/manage/items', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: {
+        title: f.title.trim(),
+        description: f.description,
+        emoji: f.emoji,
+        tag: f.tag,
+        author: f.author,
+        content: f.content,
+        categoryId: f.categoryId === '' ? null : Number(f.categoryId),
+        status: Number(f.status)
+      }
     })
-    const json = await res.json()
-    if (json.code === 200 && json.data) {
-      items.value.unshift(json.data)
-      showCreate.value = false
-      flash('新条目已落笔 ♥')
-    } else {
-      createError.value = json.message || '创建失败，请稍后再试'
-    }
+    showCreate.value = false
+    page.value = 1
+    await fetchItems()
+    fetchStats()
+    flash('新条目已落笔 ♥')
   } catch (e) {
-    createError.value = '冥府信道未通，创建失败'
+    createError.value = e.message || '创建失败，请稍后再试'
   } finally {
     createSaving.value = false
   }
@@ -252,16 +286,12 @@ async function toggleStatus(it) {
   const next = it.status === 1 ? 0 : 1
   busyId.value = it.id
   try {
-    const res = await fetch(`${API_BASE}/api/manage/items/${it.id}/status?status=${next}`, { method: 'PUT' })
-    const json = await res.json()
-    if (json.code === 200 && json.data) {
-      replaceRow(json.data)
-      flash(next === 1 ? '已上线 ♥' : '已下线')
-    } else {
-      flash(json.message || '操作失败')
-    }
+    const data = await adminFetch(`/api/manage/items/${it.id}/status?status=${next}`, { method: 'PUT' })
+    replaceRow(data)
+    fetchStats()
+    flash(next === 1 ? '已上线 ♥' : '已下线')
   } catch (e) {
-    flash('冥府信道未通，操作失败')
+    flash(e.message || '操作失败')
   } finally {
     busyId.value = null
   }
@@ -288,29 +318,80 @@ async function confirmDelete() {
   deleting.value = true
   delError.value = ''
   try {
-    const res = await fetch(`${API_BASE}/api/manage/items/${it.id}`, { method: 'DELETE' })
-    const json = await res.json()
-    if (json.code === 200) {
-      items.value = items.value.filter(x => x.id !== it.id)
-      showDelete.value = false
-      flash('条目已移除')
-    } else {
-      delError.value = json.message || '删除失败，请稍后再试'
-    }
+    await adminFetch(`/api/manage/items/${it.id}`, { method: 'DELETE' })
+    showDelete.value = false
+    await fetchItems()
+    fetchStats()
+    flash('条目已移入回收站')
   } catch (e) {
-    delError.value = '冥府信道未通，删除失败'
+    delError.value = e.message || '删除失败，请稍后再试'
   } finally {
     deleting.value = false
   }
 }
 
-// 用后端返回的最新行替换列表中的那一行（避免整表重查）
+// ---------- 回收站恢复 ----------
+async function restoreItem(it) {
+  busyId.value = it.id
+  try {
+    await adminFetch(`/api/manage/items/${it.id}/restore`, { method: 'POST' })
+    await fetchItems()
+    fetchStats()
+    flash('条目已重回生死簿 ♥')
+  } catch (e) {
+    flash(e.message || '恢复失败')
+  } finally {
+    busyId.value = null
+  }
+}
+
+// ---------- 退出登录 ----------
+async function doLogout() {
+  try { await adminFetch('/api/admin/logout', { method: 'POST' }) } catch (e) { /* 本地仍要登出 */ }
+  clearAdmin()
+  emit('logout')
+}
+
+// ---------- 账号安全：修改口令 ----------
+const pwdForm = ref({ oldPassword: '', newPassword: '', confirm: '' })
+const pwdSaving = ref(false)
+const pwdError = ref('')
+async function savePassword() {
+  const f = pwdForm.value
+  if (!f.oldPassword || !f.newPassword) { pwdError.value = '请填写原口令与新口令'; return }
+  if (f.newPassword.length < 6) { pwdError.value = '新口令至少 6 位'; return }
+  if (f.newPassword !== f.confirm) { pwdError.value = '两次输入的新口令不一致'; return }
+  pwdSaving.value = true
+  pwdError.value = ''
+  try {
+    const data = await adminFetch('/api/admin/password', {
+      method: 'PUT',
+      body: { oldPassword: f.oldPassword, newPassword: f.newPassword }
+    })
+    if (data && data.token) persistAdmin(Object.assign({}, props.admin || {}, data))
+    pwdForm.value = { oldPassword: '', newPassword: '', confirm: '' }
+    flash('口令已更换，新令牌已生效 ♥')
+  } catch (e) {
+    pwdError.value = e.message || '更换失败，请稍后再试'
+  } finally {
+    pwdSaving.value = false
+  }
+}
+
 function replaceRow(vo) {
+  if (!vo) { fetchItems(); return }
   const i = items.value.findIndex(x => x.id === vo.id)
   if (i === -1) { fetchItems(); return }
   items.value.splice(i, 1, vo)
 }
 
+// Esc 关闭弹窗（保存/删除/新增进行中不打断）
+function onEsc(e) {
+  if (e.key !== 'Escape') return
+  if (showDelete.value) closeDelete()
+  else if (showEdit.value) closeEdit()
+  else if (showCreate.value) closeCreate()
+}
 </script>
 
 <template>
@@ -325,90 +406,174 @@ function replaceRow(vo) {
 
       <div class="top-actions">
         <button class="ghost" type="button" @click="emit('back')" @pointerdown="spawnRipple">← 返回首页</button>
-        <span class="admin-chip" :title="isDemo ? '演示身份 · 未真实鉴权' : '已登录管理员'">
-          <span class="admin-avatar">{{ isDemo ? '🎭' : '🧿' }}</span>
-          <span class="admin-name">{{ adminName }}<em v-if="isDemo">演示</em></span>
+        <span class="channel" :class="backendReady ? 'on' : 'off'">
+          {{ backendReady ? '● 信道已通' : '○ 信道断开' }}
         </span>
-        <button class="logout" type="button" @click="emit('logout')" @pointerdown="spawnRipple">退 出</button>
+        <span class="admin-chip" title="已通过服务端校验的管理员">
+          <span class="admin-avatar">🧿</span>
+          <span class="admin-name">{{ adminName }}</span>
+        </span>
+        <button class="logout" type="button" @click="doLogout" @pointerdown="spawnRipple">退 出</button>
       </div>
     </header>
+
+    <!-- ============ 标签页 ============ -->
+    <nav class="tabs" role="tablist">
+      <button
+        v-for="t in tabs" :key="t.key" type="button" class="tab"
+        :class="{ active: tab === t.key }" role="tab" :aria-selected="tab === t.key"
+        @click="switchTab(t.key)"
+      >
+        <span class="tab-ico">{{ t.icon }}</span>{{ t.label }}
+        <em v-if="t.key === 'recycle' && stats.deleted">{{ stats.deleted }}</em>
+      </button>
+    </nav>
 
     <!-- ============ 概览 ============ -->
     <section class="stats">
       <div v-tilt="{ strength: 7 }" class="stat violet">
-        <span class="stat-num">{{ total }}</span>
+        <span class="stat-num">{{ stats.total }}</span>
         <span class="stat-label">条目总数</span>
       </div>
       <div v-tilt="{ strength: 7 }" class="stat pink">
-        <span class="stat-num">{{ backendReady ? onlineCount : '—' }}</span>
+        <span class="stat-num">{{ stats.online }}</span>
         <span class="stat-label">上线中</span>
       </div>
       <div v-tilt="{ strength: 7 }" class="stat gold">
-        <span class="stat-num">{{ backendReady ? offlineCount : '—' }}</span>
+        <span class="stat-num">{{ stats.offline }}</span>
         <span class="stat-label">已下线</span>
       </div>
-      <div v-tilt="{ strength: 7 }" class="stat" :class="backendReady ? 'ok' : 'bad'">
-        <span class="stat-num">{{ backendReady ? '通' : '断' }}</span>
-        <span class="stat-label">冥府信道</span>
+      <div v-tilt="{ strength: 7 }" class="stat">
+        <span class="stat-num">{{ stats.deleted }}</span>
+        <span class="stat-label">回收站</span>
       </div>
     </section>
 
-    <!-- ============ 筛选 ============ -->
-    <section class="filter">
-      <form class="filter-form" @submit.prevent="fetchItems">
-        <input v-model="keyword" type="text" maxlength="40" placeholder="按标题 / 标签搜寻" />
-        <input v-model="categoryId" type="number" min="1" placeholder="分类ID（可选）" class="cid" />
-        <button class="btn-main" type="submit" :disabled="loading" @pointerdown="spawnRipple">
-          {{ loading ? '翻检中…' : '查 阅' }}
-        </button>
-        <button class="btn-ghost" type="button" @click="resetFilter" @pointerdown="spawnRipple">重 置</button>
+    <!-- ============ 账号安全 ============ -->
+    <section v-if="tab === 'account'" class="account">
+      <h2 class="acc-title">账号安全</h2>
+      <p class="acc-tip">
+        当前管理员：<b>{{ adminName }}</b>。后台凭证有效期 8 小时，过期后需重新登录。
+        首次使用默认账号 <code>admin / admin123</code> 者，请务必立即更换口令。
+      </p>
+      <form class="acc-form" @submit.prevent="savePassword">
+        <label class="mf">
+          <span>原口令</span>
+          <input v-model="pwdForm.oldPassword" type="password" autocomplete="current-password"
+                 maxlength="40" placeholder="请输入当前口令" />
+        </label>
+        <label class="mf">
+          <span>新口令（6~40 位）</span>
+          <input v-model="pwdForm.newPassword" type="password" autocomplete="new-password"
+                 maxlength="40" placeholder="请输入新口令" />
+        </label>
+        <label class="mf">
+          <span>确认新口令</span>
+          <input v-model="pwdForm.confirm" type="password" autocomplete="new-password"
+                 maxlength="40" placeholder="再输入一次新口令" />
+        </label>
+        <p v-if="pwdError" class="modal-err">{{ pwdError }}</p>
+        <div class="acc-foot">
+          <button class="btn-main" type="submit" :disabled="pwdSaving" @pointerdown="spawnRipple">
+            {{ pwdSaving ? '更换中…' : '更 换 口 令' }}
+          </button>
+        </div>
+        <p class="acc-note">更换成功后旧令牌立即失效，系统会自动用新令牌续期，无需重新登录。</p>
       </form>
     </section>
 
-    <!-- ============ 列表 ============ -->
-    <section class="list-wrap">
-      <div class="list-head">
-        <h2 class="list-title">条目管理 <em>{{ total }} 条</em></h2>
-        <button class="btn-add" type="button" @click="openCreate" @pointerdown="spawnRipple">＋ 新增条目</button>
-      </div>
+    <!-- ============ 条目管理 / 回收站 ============ -->
+    <template v-else>
+      <section class="filter">
+        <form class="filter-form" @submit.prevent="applyFilter">
+          <input v-model="keyword" type="text" maxlength="40" placeholder="按标题 / 标签 / 描述搜寻" />
+          <select v-model="categoryId" class="sel" aria-label="按分类筛选">
+            <option value="">全部分类</option>
+            <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.label }}</option>
+          </select>
+          <select v-model="statusFilter" class="sel status-sel" aria-label="按状态筛选">
+            <option value="">全部状态</option>
+            <option value="1">上线</option>
+            <option value="0">下线</option>
+          </select>
+          <button class="btn-main" type="submit" :disabled="loading" @pointerdown="spawnRipple">
+            {{ loading ? '翻检中…' : '查 阅' }}
+          </button>
+          <button class="btn-ghost" type="button" @click="resetFilter" @pointerdown="spawnRipple">重 置</button>
+        </form>
+      </section>
 
-      <p v-if="notice" class="notice" :class="{ warn: !backendReady }">{{ notice }}</p>
-
-      <div v-if="items.length" class="table" role="table">
-        <div class="tr head" role="row">
-          <span class="th emoji">图</span>
-          <span class="th">标题</span>
-          <span class="th desc">描述</span>
-          <span class="th cat">分类</span>
-          <span class="th tag">标签</span>
-          <span class="th">状态</span>
-          <span class="th act">操作</span>
+      <section class="list-wrap">
+        <div class="list-head">
+          <h2 class="list-title">
+            {{ isRecycle ? '回收站' : '条目管理' }} <em>{{ total }} 条</em>
+          </h2>
+          <button v-if="!isRecycle" class="btn-add" type="button" @click="openCreate" @pointerdown="spawnRipple">
+            ＋ 新增条目
+          </button>
+          <span v-else class="recycle-hint">逻辑删除的条目可在此恢复</span>
         </div>
-        <div v-for="it in items" :key="it.id" class="tr" role="row">
-          <span class="td emoji">{{ it.emoji || '💮' }}</span>
-          <span class="td title-cell">{{ it.title }}</span>
-          <span class="td desc">{{ it.desc }}</span>
-          <span class="td cat">{{ it.categoryName || '—' }}</span>
-          <span class="td tag">{{ it.tag || '—' }}</span>
-          <span class="td">
-            <button
-              class="status" :class="{ on: it.status === 1 }"
-              type="button" :disabled="busyId === it.id"
-              :title="it.status === 1 ? '点击下线' : '点击上线'"
-              @click="toggleStatus(it)"
-            >{{ statusText(it.status) }}</button>
-          </span>
-          <span class="td act">
-            <button class="row-btn edit" type="button" @click="openEdit(it)" title="修改此条目">修改</button>
-            <button class="row-btn del" type="button" @click="askDelete(it)" title="删除此条目">删除</button>
-          </span>
-        </div>
-      </div>
 
-      <p v-else-if="!loading && loaded && !items.length && !backendReady" class="empty">
-        待后端接口就绪后，此处将呈现条目管理列表。
-      </p>
-    </section>
+        <p v-if="notice" class="notice" :class="{ warn: !backendReady }">{{ notice }}</p>
+
+        <div v-if="items.length" class="table" role="table">
+          <div class="tr head" role="row">
+            <span class="th emoji">图</span>
+            <span class="th">标题</span>
+            <span class="th desc">描述</span>
+            <span class="th cat">分类</span>
+            <span class="th tag">标签</span>
+            <span class="th">状态</span>
+            <span class="th act">操作</span>
+          </div>
+          <div v-for="it in items" :key="it.id" class="tr" role="row">
+            <span class="td emoji">{{ it.emoji || '💮' }}</span>
+            <span class="td title-cell">{{ it.title }}</span>
+            <span class="td desc">{{ it.desc }}</span>
+            <span class="td cat">{{ it.categoryName || '—' }}</span>
+            <span class="td tag">{{ it.tag || '—' }}</span>
+            <span class="td">
+              <button
+                v-if="!isRecycle" class="status" :class="{ on: it.status === 1 }"
+                type="button" :disabled="busyId === it.id"
+                :title="it.status === 1 ? '点击下线' : '点击上线'"
+                @click="toggleStatus(it)"
+              >{{ statusText(it.status) }}</button>
+              <span v-else class="status static" :class="{ on: it.status === 1 }">{{ statusText(it.status) }}</span>
+            </span>
+            <span class="td act">
+              <template v-if="!isRecycle">
+                <button class="row-btn edit" type="button" @click="openEdit(it)" title="修改此条目">修改</button>
+                <button class="row-btn del" type="button" @click="askDelete(it)" title="移入回收站">删除</button>
+              </template>
+              <button v-else class="row-btn recover" type="button" :disabled="busyId === it.id"
+                      @click="restoreItem(it)" title="恢复此条目">恢 复</button>
+            </span>
+          </div>
+        </div>
+
+        <!-- 分页 -->
+        <div v-if="pages > 0" class="pager">
+          <span class="page-info">
+            第 {{ pageStart }}–{{ pageEnd }} 条 / 共 {{ total }} 条 · 第 {{ page }}/{{ pages }} 页
+          </span>
+          <div class="pager-ctl">
+            <select v-model.number="pageSize" class="size-sel" @change="onSizeChange" aria-label="每页条数">
+              <option :value="5">5 条/页</option>
+              <option :value="10">10 条/页</option>
+              <option :value="20">20 条/页</option>
+              <option :value="50">50 条/页</option>
+            </select>
+            <button type="button" :disabled="page <= 1 || loading" @click="goPage(page - 1)">‹ 上一页</button>
+            <button type="button" :disabled="page >= pages || loading" @click="goPage(page + 1)">下一页 ›</button>
+          </div>
+        </div>
+
+        <p v-else-if="!loading && loaded && !backendReady" class="empty">
+          待后端接口就绪后，此处将呈现条目管理列表。
+        </p>
+      </section>
+    </template>
 
     <!-- ============ 轻提示 ============ -->
     <transition name="fade">
@@ -571,7 +736,7 @@ function replaceRow(vo) {
             <p class="del-tip">
               将移除条目 <b>「{{ delTarget && delTarget.title }}」</b>
               <em v-if="delTarget">（ID {{ delTarget.id }}）</em>。<br />
-              此为逻辑删除：首页与搜索立即不再展示，数据仍保留在库中，可人工恢复。
+              此为逻辑删除：首页与搜索立即不再展示，条目会进入「回收站」，可随时恢复。
             </p>
             <p v-if="delError" class="modal-err">{{ delError }}</p>
             <footer class="modal-foot">
@@ -618,6 +783,9 @@ function replaceRow(vo) {
   font-size:13px; letter-spacing:2px; padding:8px 16px; border-radius:999px; cursor:pointer; transition:.2s;
 }
 .ghost:hover{ color:#fff; background:rgba(232,74,120,.22); }
+.channel{ font-size:11px; letter-spacing:1px; padding:4px 10px; border-radius:999px; white-space:nowrap; }
+.channel.on{ color:#C9F7D8; background:rgba(60,180,110,.14); border:1px solid rgba(123,227,162,.4); }
+.channel.off{ color:#FFC9D9; background:rgba(232,74,120,.14); border:1px solid rgba(255,111,156,.45); }
 .admin-chip{
   display:flex; align-items:center; gap:8px;
   padding:5px 12px 5px 6px; border-radius:999px;
@@ -628,20 +796,41 @@ function replaceRow(vo) {
   background:linear-gradient(180deg,#9B6BD6,#6A3AA0); font-size:15px;
 }
 .admin-name{ font-size:13px; color:var(--ivory); display:flex; align-items:center; gap:6px; }
-.admin-name em{
-  font-style:normal; font-size:10px; letter-spacing:1px; color:#2b164a;
-  padding:1px 8px; border-radius:999px;
-  background:linear-gradient(180deg,#F4D58B,#E7B85A);
-}
 .logout{
   border:1px solid rgba(255,179,200,.5); background:transparent; color:var(--rose);
   font-size:13px; letter-spacing:2px; padding:8px 16px; border-radius:999px; cursor:pointer; transition:.2s;
 }
 .logout:hover{ color:#fff; background:rgba(232,74,120,.25); }
 
+/* ---------- 标签页 ---------- */
+.tabs{
+  width:min(980px,92vw); margin:20px auto 0;
+  display:flex; gap:8px; flex-wrap:wrap;
+  padding:6px; border-radius:999px;
+  background:linear-gradient(180deg, rgba(255,247,251,.12), rgba(255,247,251,.06));
+  border:1px solid var(--hairline);
+  box-shadow:var(--shadow-1), inset 0 1px 0 rgba(255,255,255,.12);
+}
+.tab{
+  flex:0 0 auto; cursor:pointer; font-family:inherit;
+  border:1px solid transparent; background:transparent; color:var(--rose);
+  font-size:13px; letter-spacing:2px; padding:9px 20px; border-radius:999px; transition:.25s var(--ease-out);
+}
+.tab:hover{ color:#fff; background:rgba(155,107,214,.22); }
+.tab.active{
+  color:#fff; border-color:rgba(244,213,139,.45);
+  background:linear-gradient(180deg,#9B6BD6,#6A3AA0);
+  box-shadow:0 5px 16px rgba(106,58,160,.5), inset 0 1px 0 rgba(255,255,255,.3);
+}
+.tab-ico{ margin-right:6px; }
+.tab em{
+  font-style:normal; margin-left:6px; font-size:10px; padding:1px 7px; border-radius:999px;
+  color:#2b164a; background:linear-gradient(180deg,#F4D58B,#E7B85A);
+}
+
 /* ---------- 概览统计 ---------- */
 .stats{
-  width:min(980px,92vw); margin:26px auto 0;
+  width:min(980px,92vw); margin:22px auto 0;
   display:grid; gap:14px;
   grid-template-columns:repeat(auto-fit, minmax(160px,1fr));
 }
@@ -658,22 +847,22 @@ function replaceRow(vo) {
 }
 .stat-label{ display:block; margin-top:4px; font-size:12px; letter-spacing:2px; color:var(--rose); opacity:.85; }
 .stat.violet{ border-color:rgba(155,107,214,.55); box-shadow:var(--shadow-1), 0 0 20px rgba(155,107,214,.18); }
-.stat.ok .stat-num{ background:linear-gradient(120deg,#C9F7D8,#7BE3A2); -webkit-background-clip:text; background-clip:text; }
-.stat.bad .stat-num{ background:linear-gradient(120deg,#FFC9D9,#FF7B9E); -webkit-background-clip:text; background-clip:text; }
 
 /* ---------- 筛选 ---------- */
 .filter{ width:min(980px,92vw); margin:20px auto 0; }
 .filter-form{ display:flex; gap:10px; flex-wrap:wrap; }
-.filter-form input{
-  flex:1 1 220px; min-width:0;
+.filter-form input, .filter-form .sel{
+  flex:1 1 180px; min-width:0;
   padding:11px 14px; border-radius:999px; outline:none;
   border:1px solid rgba(155,107,214,.45);
   background:rgba(23,12,43,.45); color:var(--ivory);
   font-size:13.5px; font-family:inherit; transition:.2s;
 }
 .filter-form input::placeholder{ color:rgba(255,233,243,.4); }
-.filter-form input:focus{ border-color:#B98CF0; box-shadow:var(--focus-ring-violet); }
-.filter-form .cid{ flex:0 1 160px; }
+.filter-form .sel{ flex:0 1 160px; cursor:pointer; }
+.filter-form .status-sel{ flex:0 1 130px; }
+.filter-form .sel option{ background:#2b164a; color:var(--ivory); }
+.filter-form input:focus, .filter-form .sel:focus{ border-color:#B98CF0; box-shadow:var(--focus-ring-violet); }
 .btn-main{
   border:none; cursor:pointer; padding:11px 24px; border-radius:999px;
   font-family:var(--font-serif); font-size:14px; font-weight:700; letter-spacing:3px; color:#fff;
@@ -700,6 +889,7 @@ function replaceRow(vo) {
   display:flex; align-items:baseline; gap:8px;
 }
 .list-title em{ font-style:normal; font-size:12px; letter-spacing:1px; color:var(--gold); opacity:.8; }
+.recycle-hint{ font-size:12px; color:var(--rose); opacity:.75; letter-spacing:1px; }
 .btn-add{
   position:relative; overflow:hidden;
   border:none; cursor:pointer; padding:10px 20px; border-radius:999px;
@@ -739,10 +929,11 @@ function replaceRow(vo) {
   color:#FFC9D9; background:rgba(232,74,120,.18); border:1px solid rgba(255,111,156,.4);
   font-family:inherit; cursor:pointer; transition:.2s;
 }
-.status:hover:not(:disabled){ color:#fff; background:rgba(232,74,120,.42); box-shadow:0 0 14px rgba(255,111,156,.55); }
+.status:hover:not(:disabled):not(.static){ color:#fff; background:rgba(232,74,120,.42); box-shadow:0 0 14px rgba(255,111,156,.55); }
 .status:disabled{ cursor:wait; opacity:.6; }
+.status.static{ cursor:default; }
 .status.on{ color:#C9F7D8; background:rgba(60,180,110,.16); border-color:rgba(123,227,162,.45); }
-.status.on:hover:not(:disabled){ color:#0d2d1a; background:rgba(123,227,162,.55); box-shadow:0 0 14px rgba(123,227,162,.5); }
+.status.on:hover:not(:disabled):not(.static){ color:#0d2d1a; background:rgba(123,227,162,.55); box-shadow:0 0 14px rgba(123,227,162,.5); }
 
 /* ---------- 行内操作按钮 ---------- */
 .td.act{ display:flex; align-items:center; gap:6px; overflow:visible; }
@@ -755,6 +946,58 @@ function replaceRow(vo) {
 .row-btn.edit:hover{ color:#fff; background:rgba(155,107,214,.5); box-shadow:0 0 14px rgba(185,140,240,.45); }
 .row-btn.del{ color:#FFC9D9; border-color:rgba(255,111,156,.5); background:rgba(232,74,120,.12); }
 .row-btn.del:hover{ color:#fff; background:rgba(201,51,99,.72); box-shadow:0 0 14px rgba(255,111,156,.45); }
+.row-btn.recover{ color:#C9F7D8; border-color:rgba(123,227,162,.55); background:rgba(60,180,110,.14); }
+.row-btn.recover:hover:not(:disabled){ color:#0d2d1a; background:rgba(123,227,162,.55); box-shadow:0 0 14px rgba(123,227,162,.45); }
+.row-btn:disabled{ cursor:wait; opacity:.55; }
+
+/* ---------- 分页 ---------- */
+.pager{
+  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  margin-top:14px; padding:10px 4px;
+}
+.page-info{ font-size:12.5px; letter-spacing:1px; color:var(--rose); opacity:.85; }
+.pager-ctl{ display:flex; align-items:center; gap:8px; }
+.pager-ctl button{
+  font-family:inherit; font-size:12px; letter-spacing:1px; cursor:pointer;
+  padding:7px 14px; border-radius:999px; color:var(--gold);
+  border:1px solid rgba(244,213,139,.5); background:rgba(244,213,139,.08); transition:.2s;
+}
+.pager-ctl button:hover:not(:disabled){ color:#fff; background:rgba(244,213,139,.22); }
+.pager-ctl button:disabled{ cursor:default; opacity:.4; }
+.size-sel{
+  font-family:inherit; font-size:12px; cursor:pointer; color:var(--ivory);
+  padding:7px 12px; border-radius:999px; outline:none;
+  border:1px solid rgba(155,107,214,.5); background:rgba(23,12,43,.55);
+}
+.size-sel option{ background:#2b164a; color:var(--ivory); }
+
+/* ---------- 账号安全 ---------- */
+.account{
+  width:min(560px,92vw); margin:24px auto 60px; padding:26px 28px 28px;
+  border-radius:var(--radius-lg);
+  background:linear-gradient(180deg, rgba(255,247,251,.13), rgba(255,247,251,.06));
+  border:1px solid rgba(155,107,214,.45);
+  box-shadow:var(--shadow-1), inset 0 1px 0 rgba(255,255,255,.14);
+}
+.acc-title{
+  margin:0 0 10px; font-family:var(--font-serif); font-size:19px; letter-spacing:2px; color:var(--ivory);
+}
+.acc-tip{ margin:0 0 20px; font-size:12.5px; line-height:1.9; color:var(--gold); opacity:.9; }
+.acc-tip b{ color:var(--ivory); }
+.acc-tip code{ color:#FFE6F0; font-family:inherit; }
+.acc-form .mf{ display:block; margin-bottom:14px; }
+.acc-form .mf > span{
+  display:block; margin:0 0 6px 2px; font-size:12px; letter-spacing:1.5px; color:var(--gold); opacity:.9;
+}
+.acc-form .mf input{
+  width:100%; padding:11px 13px; border-radius:12px; outline:none;
+  border:1px solid rgba(155,107,214,.5); background:rgba(23,12,43,.6);
+  color:var(--ivory); font-size:13.5px; font-family:inherit; transition:.2s;
+}
+.acc-form .mf input::placeholder{ color:rgba(255,233,243,.35); }
+.acc-form .mf input:focus{ border-color:#B98CF0; box-shadow:var(--focus-ring-violet); }
+.acc-foot{ display:flex; justify-content:flex-end; margin-top:6px; }
+.acc-note{ margin:14px 0 0; font-size:11.5px; line-height:1.7; color:var(--rose); opacity:.7; }
 
 /* ---------- 弹窗 ---------- */
 .mask{
@@ -846,6 +1089,8 @@ function replaceRow(vo) {
   .topbar{ flex-wrap:wrap; }
   .mrow{ flex-wrap:wrap; }
   .mrow > .mf, .mrow > .mf.grow{ flex:1 1 100%; }
+  .filter-form .sel, .filter-form .status-sel{ flex:1 1 46%; }
+  .pager{ flex-direction:column; align-items:flex-start; }
 }
 
 /* ---------- 微微发光的科技感交互 ---------- */
@@ -857,22 +1102,18 @@ function replaceRow(vo) {
 }
 @keyframes techRipple{ to{ transform:scale(1); opacity:0; } }
 
-/* 列表行：悬停辉光 + 左侧霓虹描边 */
 .tr{ position:relative; transition:background .25s var(--ease-out), box-shadow .25s var(--ease-out); }
 .tr:not(.head):hover{
   background:rgba(155,107,214,.14);
   box-shadow:inset 0 0 26px rgba(155,107,214,.22), inset 2px 0 0 #B98CF0;
 }
 
-/* 状态标签：霓虹微光 */
 .status{ box-shadow:0 0 10px rgba(255,111,156,.35); }
 .status.on{ box-shadow:0 0 12px rgba(123,227,162,.42); }
 
-/* 概览卡：悬停辉光描边 */
 .stat{ transition:box-shadow .3s var(--ease-out), border-color .3s, transform .3s var(--ease-out); }
 .stat:hover{ border-color:rgba(185,140,240,.7); box-shadow:var(--shadow-1), 0 0 26px rgba(155,107,214,.4); }
 
-/* 按钮：悬停微光 */
 .btn-main{ box-shadow:0 5px 0 #4A2680, 0 10px 18px rgba(106,58,160,.45), 0 0 18px rgba(155,107,214,.4); }
 .ghost:hover,.logout:hover{ box-shadow:0 0 16px rgba(232,74,120,.35); }
 .btn-ghost:hover{ box-shadow:0 0 16px rgba(244,213,139,.35); }

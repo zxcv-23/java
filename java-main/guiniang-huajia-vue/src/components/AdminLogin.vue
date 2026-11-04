@@ -1,19 +1,17 @@
 <script setup>
 import { ref } from 'vue'
+import { adminLogin, saveAdmin } from '../utils/adminApi'
 
-// 后台登录：优先请求后端 /api/admin/login；
-// 后端未启动 / 接口未实现时，提供「演示身份进入」（不伪造登录成功，明确标注）。
+// 后台登录：真实调用 /api/admin/login，成功后保存后台 JWT。
+// 已移除「演示身份进入」——鉴权加固后不再允许无凭证进入并写入真实数据。
 const emit = defineEmits(['loggedIn', 'back'])
-
-const API_BASE = 'http://127.0.0.1:8081'
 
 const account = ref('')
 const password = ref('')
 const showPwd = ref(false)
 const loading = ref(false)
 const notice = ref('')
-const noticeKind = ref('')   // error | info
-const demoOffer = ref(false) // 接口不可用时是否给出演示入口
+const noticeKind = ref('error') // error | info
 
 async function onSubmit() {
   const acc = account.value.trim()
@@ -25,50 +23,18 @@ async function onSubmit() {
   }
   loading.value = true
   notice.value = ''
-  demoOffer.value = false
   try {
-    const res = await fetch(API_BASE + '/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ account: acc, password: pwd })
-    })
-    if (res.ok) {
-      const json = await res.json()
-      if (json.code === 200 && json.data) {
-        const admin = json.data
-        try { window.localStorage.setItem('guiniang_admin', JSON.stringify(admin)) } catch {}
-        emit('loggedIn', admin)
-        return
-      }
-      noticeKind.value = 'error'
-      notice.value = json.message || '名讳或口令有误'
-    } else if (res.status === 404) {
-      apiMissing()
-    } else {
-      noticeKind.value = 'error'
-      notice.value = '冥府信道受阻（HTTP ' + res.status + '），请稍后再试'
-    }
+    const admin = await adminLogin(acc, pwd)
+    saveAdmin(admin)
+    emit('loggedIn', admin)
   } catch (e) {
-    // 后端未启动
-    noticeKind.value = 'error'
-    notice.value = '冥府信道未通 · 后端未启动，无法核验名讳'
-    demoOffer.value = true
+    const msg = e.message || '名讳或口令有误'
+    // 后端未启动 / 接口缺失属于环境提示（金色），口令错误属于校验失败（红色）
+    noticeKind.value = /冥府信道|尚未就绪|格式异常/.test(msg) ? 'info' : 'error'
+    notice.value = msg
   } finally {
     loading.value = false
   }
-}
-
-// 后台登录接口尚未实现时的提示（保留演示入口，便于查看后台界面排版）
-function apiMissing() {
-  noticeKind.value = 'info'
-  notice.value = '后台登录接口（/api/admin/login）尚未实现，可暂以演示身份进入查看界面。'
-  demoOffer.value = true
-}
-
-function enterDemo() {
-  const admin = { account: 'admin', name: '判官（演示）', token: 'demo', demo: true }
-  try { window.sessionStorage.setItem('guiniang_admin', JSON.stringify(admin)) } catch {}
-  emit('loggedIn', admin)
 }
 
 function back() {
@@ -106,9 +72,7 @@ function back() {
         {{ loading ? '核验中…' : '入 台' }}
       </button>
 
-      <button v-if="demoOffer" class="demo" type="button" @click="enterDemo">
-        以演示身份进入（不写库，仅查看界面）
-      </button>
+      <p class="hint">首次使用默认账号 <code>admin / admin123</code>，登录后请到「账号安全」更换口令。</p>
 
       <button class="back" type="button" @click="back">← 返回前台首页</button>
     </form>
@@ -182,16 +146,14 @@ function back() {
 .submit:active{ transform:translateY(3px); box-shadow:0 2px 0 #4A2680, 0 6px 12px rgba(106,58,160,.4); }
 .submit:disabled{ cursor:default; filter:grayscale(.25); }
 
-.demo{
-  width:100%; margin-top:10px; cursor:pointer;
-  padding:10px 0; border-radius:999px;
-  border:1px dashed rgba(244,213,139,.55); background:transparent;
-  color:var(--gold); font-size:12.5px; letter-spacing:1px; font-family:inherit; transition:.2s;
+.hint{
+  margin:14px 0 0; font-size:11.5px; line-height:1.7; letter-spacing:.5px;
+  color:var(--rose); opacity:.72; text-align:center;
 }
-.demo:hover{ color:#fff; background:rgba(244,213,139,.12); }
+.hint code{ color:var(--gold); font-family:inherit; }
 
 .back{
-  display:block; margin:16px auto 0; border:none; background:transparent; cursor:pointer;
+  display:block; margin:12px auto 0; border:none; background:transparent; cursor:pointer;
   color:var(--rose); font-size:12.5px; letter-spacing:2px; font-family:inherit;
   padding:6px 10px; border-radius:999px; transition:.2s; opacity:.85;
 }
