@@ -41,6 +41,9 @@ public class Item {
     /** 状态：1-上线 0-下线 */
     private Integer status;
 
+    /** 浏览次数（详情页每次打开 +1） */
+    private Long viewCount;
+
     /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

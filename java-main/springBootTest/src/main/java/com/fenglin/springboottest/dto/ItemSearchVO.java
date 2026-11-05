@@ -29,4 +29,10 @@ public class ItemSearchVO {
 
     /** 所属分类名称 */
     private String categoryName;
+
+    /** 浏览次数 */
+    private Long viewCount;
+
+    /** 被收藏次数 */
+    private Long favoriteCount;
 }

@@ -1,6 +1,7 @@
 package com.fenglin.springboottest.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.fenglin.springboottest.dto.ItemDetailVO;
 import com.fenglin.springboottest.dto.ItemManageVO;
 import com.fenglin.springboottest.dto.ItemSearchVO;
 import com.fenglin.springboottest.entity.Item;
@@ -26,15 +27,17 @@ public interface ItemMapper extends BaseMapper<Item> {
      */
     @Select("<script>" +
             "SELECT i.id, i.emoji, i.title, i.description AS `desc`, i.tag, " +
-            "       i.category_id AS categoryId, c.name AS categoryName " +
+            "       i.category_id AS categoryId, c.name AS categoryName, " +
+            "       i.view_count AS viewCount, " +
+            "       (SELECT COUNT(*) FROM favorite f WHERE f.item_id = i.id) AS favoriteCount " +
             "FROM item i " +
             "LEFT JOIN category c ON c.id = i.category_id " +
             "WHERE i.deleted = 0 AND i.status = 1 " +
             "<if test='keyword != null and keyword != \"\"'>" +
-            "  AND (i.title LIKE CONCAT('%', #{keyword}, '%') " +
-            "       OR i.description LIKE CONCAT('%', #{keyword}, '%') " +
-            "       OR i.tag LIKE CONCAT('%', #{keyword}, '%') " +
-            "       OR i.content LIKE CONCAT('%', #{keyword}, '%')) " +
+            "  AND (i.title LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!' " +
+            "       OR i.description LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!' " +
+            "       OR i.tag LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!' " +
+            "       OR i.content LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!') " +
             "</if>" +
             "<if test='categoryId != null'>" +
             "  AND i.category_id IN (" +
@@ -53,7 +56,9 @@ public interface ItemMapper extends BaseMapper<Item> {
      * 首页推荐：上线条目按 ID 倒序取前 8 条。
      */
     @Select("SELECT i.id, i.emoji, i.title, i.description AS `desc`, i.tag, " +
-            "       i.category_id AS categoryId, c.name AS categoryName " +
+            "       i.category_id AS categoryId, c.name AS categoryName, " +
+            "       i.view_count AS viewCount, " +
+            "       (SELECT COUNT(*) FROM favorite f WHERE f.item_id = i.id) AS favoriteCount " +
             "FROM item i LEFT JOIN category c ON c.id = i.category_id " +
             "WHERE i.deleted = 0 AND i.status = 1 " +
             "ORDER BY i.id DESC LIMIT 8")
@@ -80,9 +85,9 @@ public interface ItemMapper extends BaseMapper<Item> {
             "LEFT JOIN category c ON c.id = i.category_id " +
             "WHERE i.deleted = #{deleted} " +
             "<if test='keyword != null and keyword != \"\"'>" +
-            "  AND (i.title LIKE CONCAT('%', #{keyword}, '%') " +
-            "       OR i.tag LIKE CONCAT('%', #{keyword}, '%') " +
-            "       OR i.description LIKE CONCAT('%', #{keyword}, '%')) " +
+            "  AND (i.title LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!' " +
+            "       OR i.tag LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!' " +
+            "       OR i.description LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!') " +
             "</if>" +
             "<if test='categoryId != null'>" +
             "  AND i.category_id = #{categoryId} " +
@@ -104,9 +109,9 @@ public interface ItemMapper extends BaseMapper<Item> {
             "SELECT COUNT(*) FROM item i " +
             "WHERE i.deleted = #{deleted} " +
             "<if test='keyword != null and keyword != \"\"'>" +
-            "  AND (i.title LIKE CONCAT('%', #{keyword}, '%') " +
-            "       OR i.tag LIKE CONCAT('%', #{keyword}, '%') " +
-            "       OR i.description LIKE CONCAT('%', #{keyword}, '%')) " +
+            "  AND (i.title LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!' " +
+            "       OR i.tag LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!' " +
+            "       OR i.description LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!') " +
             "</if>" +
             "<if test='categoryId != null'>" +
             "  AND i.category_id = #{categoryId} " +
@@ -137,4 +142,89 @@ public interface ItemMapper extends BaseMapper<Item> {
             "LEFT JOIN category c ON c.id = i.category_id " +
             "WHERE i.deleted = 0 AND i.id = #{id}")
     ItemManageVO manageItem(@Param("id") Long id);
+
+    /**
+     * 前台条目详情：只返回上线且未删除的条目，包含正文、作者、浏览量与收藏数。
+     */
+    @Select("SELECT i.id, i.emoji, i.title, i.description AS `desc`, i.tag, " +
+            "       i.content, i.author, i.create_time AS createTime, " +
+            "       i.category_id AS categoryId, c.name AS categoryName, " +
+            "       i.view_count AS viewCount, " +
+            "       (SELECT COUNT(*) FROM favorite f WHERE f.item_id = i.id) AS favoriteCount " +
+            "FROM item i LEFT JOIN category c ON c.id = i.category_id " +
+            "WHERE i.id = #{id} AND i.deleted = 0 AND i.status = 1")
+    ItemDetailVO detail(@Param("id") Long id);
+
+    /** 浏览量 +1（原子自增，只作用于仍在线的条目） */
+    @Update("UPDATE item SET view_count = view_count + 1 " +
+            "WHERE id = #{id} AND deleted = 0 AND status = 1")
+    int incrementView(@Param("id") Long id);
+
+    /**
+     * 前台分页浏览：关键词 + 分级分类 + 排序（new 最新 / hot 最热）。
+     * keyword 已在 Service 层做 LIKE 通配符转义，这里统一用 ESCAPE '!'。
+     */
+    @Select("<script>" +
+            "SELECT i.id, i.emoji, i.title, i.description AS `desc`, i.tag, " +
+            "       i.category_id AS categoryId, c.name AS categoryName, " +
+            "       i.view_count AS viewCount, " +
+            "       (SELECT COUNT(*) FROM favorite f WHERE f.item_id = i.id) AS favoriteCount " +
+            "FROM item i LEFT JOIN category c ON c.id = i.category_id " +
+            "WHERE i.deleted = 0 AND i.status = 1 " +
+            "<if test='keyword != null and keyword != \"\"'>" +
+            "  AND (i.title LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!' " +
+            "       OR i.description LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!' " +
+            "       OR i.tag LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!' " +
+            "       OR i.content LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!') " +
+            "</if>" +
+            "<if test='categoryId != null'>" +
+            "  AND i.category_id IN (" +
+            "    WITH RECURSIVE sub AS (" +
+            "      SELECT id FROM category WHERE id = #{categoryId} " +
+            "      UNION ALL " +
+            "      SELECT cc.id FROM category cc INNER JOIN sub ON cc.parent_id = sub.id" +
+            "    ) SELECT id FROM sub" +
+            "  ) " +
+            "</if>" +
+            "<if test='hot'>ORDER BY i.view_count DESC, i.id DESC</if>" +
+            "<if test='!hot'>ORDER BY i.id DESC</if>" +
+            " LIMIT #{offset}, #{size}" +
+            "</script>")
+    List<ItemSearchVO> browsePage(@Param("keyword") String keyword,
+                                  @Param("categoryId") Long categoryId,
+                                  @Param("hot") boolean hot,
+                                  @Param("offset") long offset,
+                                  @Param("size") int size);
+
+    /** 与 browsePage 相同的筛选条件，用于分页总数 */
+    @Select("<script>" +
+            "SELECT COUNT(*) FROM item i " +
+            "WHERE i.deleted = 0 AND i.status = 1 " +
+            "<if test='keyword != null and keyword != \"\"'>" +
+            "  AND (i.title LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!' " +
+            "       OR i.description LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!' " +
+            "       OR i.tag LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!' " +
+            "       OR i.content LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!') " +
+            "</if>" +
+            "<if test='categoryId != null'>" +
+            "  AND i.category_id IN (" +
+            "    WITH RECURSIVE sub AS (" +
+            "      SELECT id FROM category WHERE id = #{categoryId} " +
+            "      UNION ALL " +
+            "      SELECT cc.id FROM category cc INNER JOIN sub ON cc.parent_id = sub.id" +
+            "    ) SELECT id FROM sub" +
+            "  ) " +
+            "</if>" +
+            "</script>")
+    long browseCount(@Param("keyword") String keyword, @Param("categoryId") Long categoryId);
+
+    /** 热门榜：按浏览量倒序，最多 30 条 */
+    @Select("SELECT i.id, i.emoji, i.title, i.description AS `desc`, i.tag, " +
+            "       i.category_id AS categoryId, c.name AS categoryName, " +
+            "       i.view_count AS viewCount, " +
+            "       (SELECT COUNT(*) FROM favorite f WHERE f.item_id = i.id) AS favoriteCount " +
+            "FROM item i LEFT JOIN category c ON c.id = i.category_id " +
+            "WHERE i.deleted = 0 AND i.status = 1 " +
+            "ORDER BY i.view_count DESC, i.id DESC LIMIT #{limit}")
+    List<ItemSearchVO> hot(@Param("limit") int limit);
 }

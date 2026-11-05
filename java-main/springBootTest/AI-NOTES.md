@@ -4,7 +4,7 @@
 
 ## 项目概况
 - Spring Boot 3.4.5 + Java 17/21 + MyBatis-Plus 3.5.7 + MySQL 8，端口 **8081**，profile=dev
-- 当前版本路径：`C:\Users\user\IdeaProjects\java\java-main\springBootTest`（前端同级 `guiniang-huajia-vue`）
+- 当前版本路径：`D:\workSpace\java\java-main\springBootTest`（前端同级 `guiniang-huajia-vue`）
 - 前台注册/登录 + 个人中心：
   - `POST /api/user/register` `{"username","password"}`（用户名 2~20 位，密码 6~32 位，BCrypt）
   - `POST /api/user/login` `{"account","password"}` → 用户信息 + **scope=user 的 JWT**
@@ -51,9 +51,9 @@
 - 绝不 DROP 库/表来"修"结构，所有迁移脚本都是补列、不删数据。
 
 ## 环境事实（已验证 2026-11-04）
-- Java：PATH 里是 `C:\Program Files\Zulu\zulu-21` 的说明已过时，本机实际是 **Microsoft jdk-17**（`java -version` 可用），pom `<java.version>17</java.version>` 编译通过
+- Java：本机 `java -version` 为 **Zulu 21.0.10**；pom `<java.version>17</java.version>` 以 `--release 17` 编译通过
 - MySQL 8：`C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe`，root/123456，库 `guiniang`，3306 在跑
-- Maven：PATH 里没有；可用缓存 `C:\Users\user\.m2\wrapper\dists\apache-maven-3.9.9-bin\4nf9hui3q3djbarqar9g711ggc\apache-maven-3.9.9`
+- Maven：PATH 里没有；可用缓存 `C:\Users\Administrator\.m2\wrapper\dists\apache-maven-3.9.9-bin\4nf9hui3q3djbarqar9g711ggc\apache-maven-3.9.9`
   - **Git Bash 里 `mvn` / `mvnw` 会报 "Unable to access jarfile"，且本环境 PATH 缺 coreutils（ls/head/dirname 不可用）**
   - 可靠构建方式：直接用 java 调 classworlds 启动器，例如
     ```bash
@@ -92,3 +92,88 @@ curl -H "Authorization: Bearer <token>" "http://127.0.0.1:8081/api/manage/items?
 
 ## 姊妹项目
 前端 `../guiniang-huajia-vue`（Vite 6 + Vue 3，端口 5173，见其 AI-NOTES.md）。上级目录有 `start-all.bat` / `stop-all.bat` 一键脚本。
+
+## 2026-11-05 功能完善
+
+### 新增：前台条目浏览与收藏
+| 方法 | 路径 | 鉴权 | 说明 |
+|------|------|------|------|
+| GET | `/api/items` | 公开 | 分页浏览，参数 `keyword,categoryId,sort=new\|hot,page,size`（size 上限 50），返回 `PageResult<ItemSearchVO>` |
+| GET | `/api/items/hot?limit=8` | 公开 | 热门榜，按 `view_count` 倒序 |
+| GET | `/api/items/{id}` | 公开 | 详情（含 content/author/浏览量/收藏数），**每次调用 view_count +1**；下线/已删除返回业务提示 |
+| GET | `/api/profile/favorites` | 用户 JWT | 我的收藏列表 |
+| GET | `/api/profile/favorites/{itemId}` | 用户 JWT | 查询是否已收藏 |
+| POST | `/api/profile/favorites/{itemId}/toggle` | 用户 JWT | 收藏/取消，返回 `{itemId,favorited,favoriteCount}` |
+
+- 旧 `GET /api/search` 保留不变，老前端照常可用。
+- 关键词统一做 LIKE 通配符转义（`!` 作为 ESCAPE 字符），修复「搜 `%` 命中全部条目」；`%` `_` 现在按普通字符匹配。
+- `item` 新增 `view_count` 列；新增 `favorite` 表（唯一键 user_id + item_id），收藏表用物理删除，结构简单。
+- 收藏接口放在 `/api/profile/**` 下，直接复用 `JwtInterceptor`，用户ID由服务端从 token 解析。
+
+### 新增：后台分类 / 轮播管理
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET/POST | `/api/manage/categories` | 分类树（带 itemCount）/ 新增 |
+| PUT/DELETE | `/api/manage/categories/{id}` | 局部修改 / 删除（有子分类或藏品时拒绝，并防父子成环） |
+| GET/POST | `/api/manage/banners` | 列表（含隐藏）/ 新增 |
+| PUT/DELETE | `/api/manage/banners/{id}` | 局部修改 / 删除 |
+| PUT | `/api/manage/banners/{id}/status?status=0\|1` | 展示 / 隐藏 |
+
+全部走已有 `/api/manage/**` 管理员 JWT 拦截，未登录仍返回 401。
+
+### 结构自愈（重要）
+- 新增 `config/SchemaMigration.java`（ApplicationRunner）：启动时用 information_schema 幂等补 `item.view_count`、`user` 扩展列、`admin.token_version`，并确保 `favorite` 表存在；失败只记日志、不阻断启动。
+- **已移除 `schema.sql` 里的 DELIMITER 存储过程**：Spring 的 SQL 脚本执行器不支持该语法，旧写法每次启动都静默报错（被 `continue-on-error=true` 吞掉），这正是历史上「注册成功但登录 500」的根因。现在补列统一由 Java 迁移器负责，`schema.sql` 只保留纯 SQL。
+- 旧库无需手工执行 `fix_*.sql` 也能自愈；手工脚本仍保留作兜底。
+
+### 本机环境事实（2026-11-05 复核）
+- 项目实际路径：`D:\workSpace\java\java-main\springBootTest`（不再是 `C:\Users\user\IdeaProjects\...`）
+- Java：`java -version` 为 **Zulu 21.0.10**；pom `<java.version>17</java.version>` 以 `--release 17` 编译，正常通过
+- Maven home：`C:\Users\Administrator\.m2\wrapper\dists\apache-maven-3.9.9-bin\4nf9hui3q3djbarqar9g711ggc\apache-maven-3.9.9`
+- 可靠构建命令（Git Bash 里直接跑 `mvn` 仍会报 Unable to access jarfile）：
+  ```bash
+  java -classpath "<maven-home>/boot/plexus-classworlds-2.8.0.jar" \
+    "-Dclassworlds.conf=<maven-home>/bin/m2.conf" "-Dmaven.home=<maven-home>" \
+    "-Dmaven.multiModuleProjectDirectory=<项目目录>" \
+    org.codehaus.plexus.classworlds.launcher.Launcher -f "<项目目录>/pom.xml" -DskipTests package
+  ```
+- 8081 常驻旧进程时，重新打包可能因 Windows 文件占用失败；可加 `-Dproject.build.directory=<项目目录>/target-verify` 输出到独立目录，再用 `--server.port=8082` 隔离验证。
+
+## 2026-11-05 第二轮：8081 旧进程导致「红妆阁 · 0 件藏品」
+
+### 现象
+用户截图显示首页「红妆阁 · 0 件藏品」，且已出现「今日推荐 / 全部藏品 / 热门榜 / 我的珍藏」四个视图按钮。
+按钮说明新前端已生效，但数据为 0。
+
+### 根因（不是数据库没连上）
+- `application-dev.properties`：`jdbc:mysql://127.0.0.1:3306/guiniang`，root/123456，
+  `spring.sql.init.mode=always` 启动即幂等建表灌数据。MySQL 3306 与 8081 都在监听，
+  库内 `item=18 / category=13 / banner=4`，`item.view_count` 列也已存在。
+- 真正原因：**8081 跑的是改造前的旧 jar**。`log/xx.log` 显示 PID 2760 于 **14:05:06** 启动，
+  而新 class 14:18 编译、新 jar 14:24 才生成 —— 进程没重启，内存里始终是旧代码。
+- 旧 jar 没有 `/api/items`、`/api/items/hot`、收藏、后台分类/轮播接口，也没有 `SchemaMigration`；
+  实测 `/api/items` 请求会**挂起超时**（不是 404），`/api/home` 却正常返回，很容易误判成「接口偶发故障」。
+- 前端 `onNav('红妆阁')` → `selectTop()` → `onSearch('', 3)` → `/api/search?categoryId=3`，
+  旧后端拿不到正确结果，`resultTitle` 就渲染成「红妆阁 · 0 件藏品」。
+
+### 修复
+停止 PID 2760，用新 jar 重新在 8081 启动；前端无需改动，刷新即可。
+`ItemMapper.search()` / `browsePage()` 都带 `WITH RECURSIVE` 子孙分类查询，重启后：
+- `/api/search?categoryId=3` → **4 条**：红妆合集、胭脂盒、嫁衣、凤冠霞帔
+- `/api/items?categoryId=3` → `total=4`；`/api/search?categoryId=1` → 6 条；`categoryId=10` → 2 条
+- 分类树：`id=3 红妆阁` → 子 `10 嫁衣` / `11 胭脂`；导航 `navItems` 与 4 个一级分类一一对应
+
+### 在 8081 正式实例上复跑 32 项端到端用例
+`32/32 passed`（home / featured viewCount / 详情 / 浏览量自增 / 分页 / 热门榜 / LIKE 转义 /
+旧 search 兼容 / 401 鉴权 / 收藏开关与列表 / 后台分类与轮播 CRUD）。
+验证产生的测试用户 `wb_verify_20261105`、`WB验证分类`、`WB验证标语`、favorite 记录、
+item 18 的浏览量已全部清理，库内回到 `18 / 13 / 4`。
+
+### 排查与防复发（重要）
+1. **判断 8081 是否新代码**：`GET /api/items?page=1&size=8` 应返回 `code=200` 且 `total=18`；
+   旧 jar 会超时或 404。更快：看 `log/xx.log` 里 `Starting SpringBootTestApplication ... with PID`
+   的时间戳，与 `target/*.jar` 的修改时间对比，进程早于 jar 就是旧代码。
+2. **改了后端源码必须三步**：重新打包 jar → 停 8081 → 重启。`start-backend.bat` 只有在
+   `target` 下没有 jar 时才会自动构建，jar 已存在会直接 `:RUN` 跑旧包，所以代码改完别只双击脚本，
+   要么先删 `target/*.jar`，要么显式重新 package。
+3. 8081 被 jar 占用导致 `mvn package` 的 repackage 失败时，输出到独立目录再覆盖回主 target。

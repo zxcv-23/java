@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fenglin.springboottest.common.PageResult;
 import com.fenglin.springboottest.dto.HomeVO;
+import com.fenglin.springboottest.dto.ItemDetailVO;
 import com.fenglin.springboottest.dto.ItemManageVO;
 import com.fenglin.springboottest.dto.ItemSearchVO;
 import com.fenglin.springboottest.dto.ItemUpdateRequest;
@@ -35,7 +36,7 @@ public class ItemServiceImpl extends ServiceImpl<ItemMapper, Item> implements It
 
     @Override
     public List<ItemSearchVO> search(String keyword, Long categoryId) {
-        return baseMapper.search(keyword, categoryId);
+        return baseMapper.search(escapeLike(keyword), categoryId);
     }
 
     @Override
@@ -65,7 +66,7 @@ public class ItemServiceImpl extends ServiceImpl<ItemMapper, Item> implements It
         int safePage = Math.max(1, page);
         int safeSize = Math.min(Math.max(1, size), 100);
         long offset = (long) (safePage - 1) * safeSize;
-        String kw = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        String kw = escapeLike(keyword);
         Integer deletedFlag = deleted ? 1 : 0;
 
         long total = baseMapper.manageCount(kw, categoryId, status, deletedFlag);
@@ -204,5 +205,61 @@ public class ItemServiceImpl extends ServiceImpl<ItemMapper, Item> implements It
             throw new BusinessException("此条目不在回收站中（可能已恢复或不存在）");
         }
         return baseMapper.manageItem(id);
+    }
+
+    @Override
+    public ItemDetailVO detail(Long id) {
+        if (id == null || id <= 0) {
+            throw new BusinessException("请指定要查看的条目");
+        }
+        ItemDetailVO vo = baseMapper.detail(id);
+        if (vo == null) {
+            // 下线、进回收站、不存在都走这里，避免泄露后台数据
+            throw new BusinessException("此物已不在生死簿中，或暂未对外开放");
+        }
+        baseMapper.incrementView(id);
+        long current = vo.getViewCount() == null ? 0L : vo.getViewCount();
+        vo.setViewCount(current + 1);
+        return vo;
+    }
+
+    @Override
+    public PageResult<ItemSearchVO> browse(String keyword, Long categoryId, String sort,
+                                           int page, int size) {
+        int safePage = Math.max(1, page);
+        int safeSize = Math.min(Math.max(1, size), 50);
+        String kw = escapeLike(keyword);
+        boolean hot = "hot".equalsIgnoreCase(sort);
+
+        long total = baseMapper.browseCount(kw, categoryId);
+        long offset = (long) (safePage - 1) * safeSize;
+        // 翻页越界时回到最后一页，避免用户看到空白页
+        if (total > 0 && offset >= total) {
+            safePage = (int) ((total + safeSize - 1) / safeSize);
+            offset = (long) (safePage - 1) * safeSize;
+        }
+        List<ItemSearchVO> list = baseMapper.browsePage(kw, categoryId, hot, offset, safeSize);
+        return PageResult.of(list, total, safePage, safeSize);
+    }
+
+    @Override
+    public List<ItemSearchVO> hot(int limit) {
+        return baseMapper.hot(Math.min(Math.max(1, limit), 30));
+    }
+
+    /**
+     * LIKE 通配符转义：把用户输入的 % / _ 当成普通字符，
+     * 否则搜索 "%" 会命中全部条目。配合 mapper 里的 {@code ESCAPE '!'} 使用。
+     * 注意顺序：必须先转义转义符本身，再转义通配符。
+     */
+    private String escapeLike(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        String kw = keyword.trim();
+        if (kw.length() > 40) {
+            kw = kw.substring(0, 40);
+        }
+        return kw.replace("!", "!!").replace("%", "!%").replace("_", "!_");
     }
 }

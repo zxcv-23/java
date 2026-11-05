@@ -3,6 +3,7 @@ package com.fenglin.springboottest.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.fenglin.springboottest.common.PageResult;
 import com.fenglin.springboottest.dto.HomeVO;
+import com.fenglin.springboottest.dto.ItemDetailVO;
 import com.fenglin.springboottest.dto.ItemManageVO;
 import com.fenglin.springboottest.dto.ItemSearchVO;
 import com.fenglin.springboottest.dto.ItemUpdateRequest;
@@ -97,4 +98,23 @@ public interface ItemService extends IService<Item> {
      * @return 恢复后的条目（供前端回显）
      */
     ItemManageVO restore(Long id);
+
+    /**
+     * 前台条目详情：含正文/作者/浏览量/收藏数，并让浏览量 +1。
+     * 条目下线或已删除时抛业务异常。
+     */
+    ItemDetailVO detail(Long id);
+
+    /**
+     * 前台分页浏览。
+     *
+     * @param sort new-按 ID 倒序（最新），hot-按浏览量倒序（最热）
+     */
+    PageResult<ItemSearchVO> browse(String keyword, Long categoryId, String sort,
+                                    int page, int size);
+
+    /**
+     * 热门榜：按浏览量倒序取前 N 条。
+     */
+    List<ItemSearchVO> hot(int limit);
 }

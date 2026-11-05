@@ -24,6 +24,9 @@ public class CategoryVO {
 
     private String description;
 
+    /** 该分类下的条目数（后台管理列表用；首页分类树为 null） */
+    private Long itemCount;
+
     /** 子分类 */
     private List<CategoryVO> children;
 }

@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS `item` (
   `content`     TEXT         DEFAULT NULL            COMMENT '正文/详情',
   `author`      VARCHAR(50)  DEFAULT NULL            COMMENT '作者/来源',
   `status`      TINYINT      NOT NULL DEFAULT 1      COMMENT '状态：1-上线 0-下线',
+  `view_count`  BIGINT       NOT NULL DEFAULT 0      COMMENT '浏览次数（详情页每次打开 +1）',
   `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `deleted`     TINYINT      NOT NULL DEFAULT 0      COMMENT '逻辑删除：0-未删除 1-已删除',
@@ -108,29 +109,26 @@ CREATE TABLE IF NOT EXISTS `admin` (
 -- 也可手工执行 sql/fix_admin_table.sql。
 
 -- ============================================================
--- 个人中心：用户表扩展字段（幂等迁移，仅当列不存在时添加）
--- 适用于「旧库已有 user 表、但缺少新列」的升级场景；全新库由上面的 CREATE 已包含。
+-- 用户收藏表（前台登录用户收藏条目）
 -- ============================================================
-DROP PROCEDURE IF EXISTS `migrate_user_profile`;
-DELIMITER $$
-CREATE PROCEDURE `migrate_user_profile`()
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user' AND COLUMN_NAME = 'email') THEN
-    ALTER TABLE `user` ADD COLUMN `email` VARCHAR(100) DEFAULT NULL COMMENT '邮箱';
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user' AND COLUMN_NAME = 'phone') THEN
-    ALTER TABLE `user` ADD COLUMN `phone` VARCHAR(20) DEFAULT NULL COMMENT '手机号';
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user' AND COLUMN_NAME = 'gender') THEN
-    ALTER TABLE `user` ADD COLUMN `gender` TINYINT NOT NULL DEFAULT 0 COMMENT '性别：0-未知 1-男 2-女';
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user' AND COLUMN_NAME = 'bio') THEN
-    ALTER TABLE `user` ADD COLUMN `bio` VARCHAR(255) DEFAULT NULL COMMENT '个性签名/简介';
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user' AND COLUMN_NAME = 'token_version') THEN
-    ALTER TABLE `user` ADD COLUMN `token_version` BIGINT NOT NULL DEFAULT 0 COMMENT '令牌版本：改密/登出时自增，使旧token失效';
-  END IF;
-END$$
-DELIMITER ;
-CALL `migrate_user_profile`();
-DROP PROCEDURE IF EXISTS `migrate_user_profile`;
+CREATE TABLE IF NOT EXISTS `favorite` (
+  `id`          BIGINT   NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id`     BIGINT   NOT NULL                COMMENT '用户ID',
+  `item_id`     BIGINT   NOT NULL                COMMENT '条目ID',
+  `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '收藏时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_favorite_user_item` (`user_id`, `item_id`),
+  KEY `idx_favorite_item` (`item_id`)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_general_ci
+  COMMENT='用户收藏表';
+
+-- ============================================================
+-- 旧库补列说明
+-- user 扩展字段(email/phone/gender/bio/token_version)、admin.token_version、
+-- item.view_count 均由 config/SchemaMigration.java 在启动时用 information_schema
+-- 幂等补齐，不删数据、不阻断启动。
+-- 这里不再使用 DELIMITER 存储过程：Spring 的 SQL 脚本执行器不支持该语法，
+-- 旧写法每次启动都会产生一条被 continue-on-error 吞掉的语法错误。
+-- ============================================================

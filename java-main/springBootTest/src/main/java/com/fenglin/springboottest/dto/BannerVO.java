@@ -23,4 +23,10 @@ public class BannerVO {
 
     /** 主题强调色（HEX） */
     private String accent;
+
+    /** 排序（后台管理用） */
+    private Integer sort;
+
+    /** 状态：1-展示 0-隐藏（后台管理用） */
+    private Integer status;
 }

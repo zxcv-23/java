@@ -62,3 +62,11 @@ curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5173/   # 应为 200
 ## ⚠️ 注意
 - **改了后端代码后必须重启后端**：前端固定打 8081，若 8081 上还是旧进程，新前端会拿到旧版「数组」格式的列表（新版要求 `data.list`），表现为列表空白。重跑 `start-backend.bat` 即可。
 - 默认管理员 `admin / admin123`，首次登录请到「账号安全」改密。
+
+## 2026-11-05 首页功能补齐（HomePage.vue）
+- 卡片现在**可点击** → 详情弹层：`GET /api/items/{id}`，展示正文 / 作者 / 浏览量 / 收藏数，并自动给浏览量 +1。
+- 登录用户可「收入珍藏」：`POST /api/profile/favorites/{id}/toggle`；导航栏「我的珍藏」→ `GET /api/profile/favorites`。请求带 `Authorization: Bearer <user.token>`，401 会提示重新登录；未登录点收藏只弹提示、不发请求。
+- 结果区新增视图切换：今日推荐 / 全部藏品（分页 + 加载更多）/ 热门榜，走 `GET /api/items?page=&size=&sort=new|hot`；另有 `GET /api/items/hot?limit=` 备用。
+- 卡片渲染统一用 `visibleCards` computed，标题用 `resultHeading` computed；**不要再新增第三套 v-for 卡片循环**，否则筛选/分页状态会打架。
+- 详情与收藏是两套独立弹层（`showDetail` / `showFavorites`），从珍藏列表点条目会先关列表再开详情。
+- 全部改动只在 `HomePage.vue` 内，未触碰 `App.vue` 的状态机。

@@ -11,6 +11,55 @@ const emit = defineEmits(['logout', 'back'])
 
 const API_BASE = 'http://127.0.0.1:8081'
 
+// ---------- 外部联动站点（后台跳转入口）----------
+// 兜底值与后端 application-dev.properties 的 partner.site.* 保持一致；
+// 后端在线时由 fetchPartnerSite() 覆盖，换目标站只需改后端配置。
+const partnerSite = ref({
+  name: '帅哥美女相亲阁',
+  url: 'http://127.0.0.1:5173/',
+  enabled: true
+})
+
+async function fetchPartnerSite() {
+  try {
+    const res = await fetch(API_BASE + '/api/partner/site')
+    if (!res.ok) return
+    const json = await res.json()
+    if (json && json.code === 200 && json.data && json.data.url) {
+      partnerSite.value = {
+        name: json.data.name || partnerSite.value.name,
+        url: json.data.url,
+        enabled: json.data.enabled !== false
+      }
+    }
+  } catch (e) {
+    // 后端未起：保留兜底地址，入口仍可跳转
+  }
+}
+
+function partnerHref() {
+  const raw = partnerSite.value.url
+  if (!raw) return ''
+  try {
+    const u = new URL(raw, window.location.href)
+    if (!u.searchParams.has('from')) u.searchParams.set('from', 'judge')
+    return u.toString()
+  } catch (e) {
+    return raw
+  }
+}
+
+function openPartnerSite() {
+  const href = partnerHref()
+  if (!href) { flash('联动站点尚未配置'); return }
+  const win = window.open(href, '_blank', 'noopener,noreferrer')
+  if (!win) {
+    window.location.href = href   // 被浏览器拦截弹窗时降级为当前页跳转
+  } else {
+    flash(`已为你打开「${partnerSite.value.name}」♥`)
+  }
+}
+
 const adminName = computed(() =>
   (props.admin && (props.admin.name || props.admin.account)) || '判官'
 )
@@ -66,6 +115,7 @@ onMounted(() => {
   fetchStats()
   fetchItems()
   fetchCategories()
+  fetchPartnerSite()
   window.addEventListener('keydown', onEsc)
 })
 onUnmounted(() => window.removeEventListener('keydown', onEsc))
@@ -406,6 +456,11 @@ function onEsc(e) {
 
       <div class="top-actions">
         <button class="ghost" type="button" @click="emit('back')" @pointerdown="spawnRipple">← 返回首页</button>
+        <button
+          v-if="partnerSite.enabled" class="ghost partner-link" type="button"
+          :title="'前往 ' + partnerSite.name + '（' + partnerSite.url + '）'"
+          @click="openPartnerSite" @pointerdown="spawnRipple"
+        >↗ {{ partnerSite.name }}</button>
         <span class="channel" :class="backendReady ? 'on' : 'off'">
           {{ backendReady ? '● 信道已通' : '○ 信道断开' }}
         </span>
@@ -783,6 +838,17 @@ function onEsc(e) {
   font-size:13px; letter-spacing:2px; padding:8px 16px; border-radius:999px; cursor:pointer; transition:.2s;
 }
 .ghost:hover{ color:#fff; background:rgba(232,74,120,.22); }
+/* 外部联动站点入口：与「返回首页」区分开，带一点粉紫描金 */
+.partner-link{
+  color:#FFD9E7;
+  border-color:rgba(232,74,120,.55);
+  background:linear-gradient(180deg, rgba(232,74,120,.20), rgba(106,58,160,.18));
+}
+.partner-link:hover{
+  color:#fff;
+  background:linear-gradient(180deg, rgba(232,74,120,.38), rgba(106,58,160,.30));
+  box-shadow:0 0 16px rgba(232,74,120,.35);
+}
 .channel{ font-size:11px; letter-spacing:1px; padding:4px 10px; border-radius:999px; white-space:nowrap; }
 .channel.on{ color:#C9F7D8; background:rgba(60,180,110,.14); border:1px solid rgba(123,227,162,.4); }
 .channel.off{ color:#FFC9D9; background:rgba(232,74,120,.14); border:1px solid rgba(255,111,156,.45); }

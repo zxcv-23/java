@@ -15,6 +15,8 @@ const emit = defineEmits(['logout', 'goAdmin', 'goProfile'])
 const API_BASE = 'http://127.0.0.1:8081'
 const SEARCH_API = API_BASE + '/api/search'
 const HOME_API = API_BASE + '/api/home'
+const ITEMS_API = API_BASE + '/api/items'
+const FAV_API = API_BASE + '/api/profile/favorites'
 
 // ---------- 导航栏 ----------
 const navItems = ['首页', '姻缘簿', '花轿信使', '红妆阁', '往生簿']
@@ -167,6 +169,7 @@ function selectSub(s) {
 function clearCategory() {
   selectedCategoryId.value = null
   expandedTopId.value = null
+  browseMode.value = false
   if (keyword.value.trim()) {
     onSearch(keyword.value, null)
   } else {
@@ -189,6 +192,7 @@ async function onSearch(q, catId) {
   searched.value = true
   notice.value = ''
   demoMode.value = false
+  browseMode.value = false
   results.value = []
   try {
     const params = new URLSearchParams()
@@ -227,6 +231,177 @@ function buildDemo(kw) {
 function onHotTag(tag) {
   onSearch(tag, selectedCategoryId.value)
 }
+
+// ---------- 分页浏览 / 热门榜 ----------
+const browseMode = ref(false)
+const browseList = ref([])
+const browseTotal = ref(0)
+const browsePage = ref(1)
+const browseSort = ref('new')
+const browseTitle = ref('')
+const browseLoading = ref(false)
+const BROWSE_SIZE = 8
+
+async function loadBrowse(sort, reset = true) {
+  if (browseLoading.value) return
+  if (sort) browseSort.value = sort
+  if (reset) {
+    browsePage.value = 1
+    browseList.value = []
+  }
+  browseTitle.value = browseSort.value === 'hot' ? '热门榜 · 众人驻足最多' : '全部藏品 · 月老执笔'
+  browseMode.value = true
+  searched.value = false
+  notice.value = ''
+  browseLoading.value = true
+  try {
+    const params = new URLSearchParams({
+      page: String(browsePage.value),
+      size: String(BROWSE_SIZE),
+      sort: browseSort.value
+    })
+    if (keyword.value.trim()) params.set('keyword', keyword.value.trim())
+    if (selectedCategoryId.value != null) params.set('categoryId', String(selectedCategoryId.value))
+    const res = await fetch(`${ITEMS_API}?${params.toString()}`)
+    const json = await parseJson(res)
+    if (res.ok && json.code === 200 && json.data) {
+      const list = Array.isArray(json.data.list) ? json.data.list : []
+      browseList.value = reset ? list : browseList.value.concat(list)
+      browseTotal.value = json.data.total || 0
+    } else {
+      notice.value = json.message || '翻阅受阻，请稍后再试'
+    }
+  } catch (e) {
+    notice.value = '冥府信道未通 · 请先启动后端'
+  } finally {
+    browseLoading.value = false
+  }
+}
+
+function loadMore() {
+  if (browseList.value.length >= browseTotal.value || browseLoading.value) return
+  browsePage.value += 1
+  loadBrowse(null, false)
+}
+
+function backToRecommend() {
+  browseMode.value = false
+  searched.value = false
+  browseList.value = []
+  notice.value = ''
+}
+
+// 结果区统一取这三处之一，避免模板里写三套卡片循环
+const visibleCards = computed(() =>
+  browseMode.value ? browseList.value : (searched.value ? results.value : featured.value)
+)
+const resultHeading = computed(() =>
+  browseMode.value ? browseTitle.value : (searched.value ? resultTitle.value : '今日推荐 · 月老牵线')
+)
+
+// ---------- 条目详情 / 收藏 ----------
+const userToken = computed(() => (props.user && props.user.token) || '')
+function authHeaders() {
+  return userToken.value ? { Authorization: 'Bearer ' + userToken.value } : {}
+}
+async function parseJson(res) {
+  try { return await res.json() } catch { return {} }
+}
+
+const showDetail = ref(false)
+const detail = ref(null)
+const detailLoading = ref(false)
+const detailError = ref('')
+const favorited = ref(false)
+
+async function openDetail(id) {
+  if (!id) return
+  showDetail.value = true
+  detail.value = null
+  detailError.value = ''
+  detailLoading.value = true
+  favorited.value = false
+  try {
+    const res = await fetch(`${ITEMS_API}/${id}`)
+    const json = await parseJson(res)
+    if (res.ok && json.code === 200 && json.data) {
+      detail.value = json.data
+      // 登录用户顺带查一下自己的收藏状态（失败不影响详情展示）
+      if (userToken.value) {
+        const sres = await fetch(`${FAV_API}/${id}`, { headers: authHeaders() })
+        const sjson = await parseJson(sres)
+        if (sres.ok && sjson.code === 200 && sjson.data) favorited.value = !!sjson.data.favorited
+      }
+    } else {
+      detailError.value = json.message || '此物暂不可见'
+    }
+  } catch (e) {
+    detailError.value = '冥府信道未通，稍后再试～'
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+async function toggleFavorite() {
+  if (!userToken.value) {
+    flashToast('先登录，才能把此物收入珍藏～')
+    return
+  }
+  if (!detail.value) return
+  try {
+    const res = await fetch(`${FAV_API}/${detail.value.id}/toggle`, {
+      method: 'POST',
+      headers: authHeaders()
+    })
+    const json = await parseJson(res)
+    if (res.status === 401) {
+      flashToast('登录已过期，请重新登录')
+    } else if (res.ok && json.code === 200 && json.data) {
+      favorited.value = !!json.data.favorited
+      detail.value.favoriteCount = json.data.favoriteCount
+      flashToast(json.message || '珍藏已更新')
+    } else {
+      flashToast(json.message || '操作未成，请稍后再试')
+    }
+  } catch (e) {
+    flashToast('冥府信道未通，稍后再试')
+  }
+}
+
+const showFavorites = ref(false)
+const favorites = ref([])
+const favoritesLoading = ref(false)
+
+async function openFavorites() {
+  if (!userToken.value) {
+    flashToast('先登录，才能查看你的珍藏～')
+    return
+  }
+  showFavorites.value = true
+  favoritesLoading.value = true
+  favorites.value = []
+  try {
+    const res = await fetch(FAV_API, { headers: authHeaders() })
+    const json = await parseJson(res)
+    if (res.status === 401) {
+      showFavorites.value = false
+      flashToast('登录已过期，请重新登录')
+    } else if (res.ok && json.code === 200) {
+      favorites.value = Array.isArray(json.data) ? json.data : []
+    } else {
+      flashToast(json.message || '取回珍藏失败')
+    }
+  } catch (e) {
+    flashToast('冥府信道未通，稍后再试')
+  } finally {
+    favoritesLoading.value = false
+  }
+}
+
+function openFromFavorites(id) {
+  showFavorites.value = false
+  openDetail(id)
+}
 </script>
 
 <template>
@@ -246,6 +421,10 @@ function onHotTag(tag) {
 
       <button class="nav-profile" type="button" @click="goProfile" title="进入个人中心">
         <span class="profile-ico">💞</span> 个人中心
+      </button>
+
+      <button class="nav-favorites" type="button" @click="openFavorites" title="查看我收藏的藏品">
+        <span class="fav-ico">💞</span> 我的珍藏
       </button>
 
       <div class="nav-user">
@@ -336,41 +515,104 @@ function onHotTag(tag) {
 
     <!-- ============ 结果区 / 首页展示 ============ -->
     <section class="result">
-      <h2 class="result-title" v-if="searched">{{ resultTitle }}</h2>
-      <h2 class="result-title" v-else>今日推荐 · 月老牵线</h2>
+      <h2 class="result-title">{{ resultHeading }}</h2>
 
-      <p v-if="!searched && !featured.length && !loading" class="result-hint">
+      <!-- 视图切换：推荐 / 全部（分页） / 热门榜 / 我的珍藏 -->
+      <div class="view-switch">
+        <button type="button" :class="{ active: !browseMode && !searched }" @click="backToRecommend">今日推荐</button>
+        <button type="button" :class="{ active: browseMode && browseSort === 'new' }" @click="loadBrowse('new')">全部藏品</button>
+        <button type="button" :class="{ active: browseMode && browseSort === 'hot' }" @click="loadBrowse('hot')">热门榜</button>
+        <button type="button" @click="openFavorites">我的珍藏</button>
+      </div>
+
+      <p v-if="!searched && !browseMode && !featured.length && !loading" class="result-hint">
         在上方输入框寻觅，或择一分类 / 点选热门标签，月老即刻为你牵线。
       </p>
 
       <p v-if="notice" class="result-notice" :class="{ demo: demoMode }">{{ notice }}</p>
 
-      <!-- 搜索结果 -->
-      <div v-if="searched && results.length" class="cards">
-        <article v-for="(r, i) in results" :key="r.id" class="card" v-reveal :style="{ transitionDelay: (i % 8) * 70 + 'ms' }">
+      <!-- 推荐 / 搜索结果 / 分页浏览 / 热门榜 共用一套卡片；点卡片看详情 -->
+      <div v-if="visibleCards.length" class="cards">
+        <article
+          v-for="(r, i) in visibleCards" :key="r.id" class="card" v-reveal
+          :style="{ transitionDelay: (i % 8) * 70 + 'ms' }"
+          role="button" tabindex="0"
+          @click="openDetail(r.id)" @keydown.enter="openDetail(r.id)"
+        >
           <div class="card-emoji">{{ r.emoji || '💮' }}</div>
           <h3 class="card-title">{{ r.title }}</h3>
           <p class="card-desc">{{ r.desc }}</p>
           <div class="card-foot">
             <span v-if="r.categoryName" class="card-cat">{{ r.categoryName }}</span>
             <span v-if="r.tag" class="card-tag">{{ r.tag }}</span>
+            <span v-if="r.viewCount" class="card-stat">👁 {{ r.viewCount }}</span>
+            <span v-if="r.favoriteCount" class="card-stat">💞 {{ r.favoriteCount }}</span>
           </div>
         </article>
       </div>
 
-      <!-- 首页展示（推荐） -->
-      <div v-if="!searched && featured.length" class="cards">
-        <article v-for="(r, i) in featured" :key="r.id" class="card" v-reveal :style="{ transitionDelay: (i % 8) * 70 + 'ms' }">
-          <div class="card-emoji">{{ r.emoji || '💮' }}</div>
-          <h3 class="card-title">{{ r.title }}</h3>
-          <p class="card-desc">{{ r.desc }}</p>
-          <div class="card-foot">
-            <span v-if="r.categoryName" class="card-cat">{{ r.categoryName }}</span>
-            <span v-if="r.tag" class="card-tag">{{ r.tag }}</span>
-          </div>
-        </article>
+      <p v-if="browseMode && browseLoading && !browseList.length" class="result-hint">月老翻查生死簿中…</p>
+      <div v-if="browseMode && browseList.length && browseList.length < browseTotal" class="load-more">
+        <button type="button" class="more-btn" :disabled="browseLoading" @click="loadMore">
+          {{ browseLoading ? '翻阅中…' : '再翻一页 · 共 ' + browseTotal + ' 件' }}
+        </button>
       </div>
     </section>
+
+    <!-- ============ 条目详情弹层 ============ -->
+    <transition name="modal">
+      <div v-if="showDetail" class="modal-mask" @click.self="showDetail = false">
+        <div class="modal-panel" role="dialog" aria-modal="true" aria-label="藏品详情">
+          <button class="modal-close" type="button" @click="showDetail = false" aria-label="关闭">✕</button>
+          <div v-if="detailLoading" class="modal-state">月老翻查生死簿中…</div>
+          <div v-else-if="detailError" class="modal-state error">{{ detailError }}</div>
+          <template v-else-if="detail">
+            <div class="modal-emoji">{{ detail.emoji || '💮' }}</div>
+            <h3 class="modal-title">{{ detail.title }}</h3>
+            <div class="modal-meta">
+              <span v-if="detail.categoryName" class="meta-chip">{{ detail.categoryName }}</span>
+              <span v-if="detail.tag" class="meta-chip">{{ detail.tag }}</span>
+              <span class="meta-stat">👁 {{ detail.viewCount || 0 }} 次驻足</span>
+              <span class="meta-stat">💞 {{ detail.favoriteCount || 0 }} 人珍藏</span>
+            </div>
+            <p class="modal-desc">{{ detail.desc }}</p>
+            <div class="modal-content">{{ detail.content || '此物尚未留下更多文字…' }}</div>
+            <p v-if="detail.author" class="modal-author">— {{ detail.author }}</p>
+            <div class="modal-actions">
+              <button type="button" class="fav-btn" :class="{ on: favorited }" @click="toggleFavorite">
+                {{ favorited ? '💞 已收入珍藏' : '🤍 收入珍藏' }}
+              </button>
+              <button type="button" class="modal-secondary" @click="showDetail = false">合 上</button>
+            </div>
+          </template>
+        </div>
+      </div>
+    </transition>
+
+    <!-- ============ 我的珍藏弹层 ============ -->
+    <transition name="modal">
+      <div v-if="showFavorites" class="modal-mask" @click.self="showFavorites = false">
+        <div class="modal-panel" role="dialog" aria-modal="true" aria-label="我的珍藏">
+          <button class="modal-close" type="button" @click="showFavorites = false" aria-label="关闭">✕</button>
+          <h3 class="modal-title">我的珍藏</h3>
+          <div v-if="favoritesLoading" class="modal-state">月老清点珍藏中…</div>
+          <div v-else-if="!favorites.length" class="modal-state">还没有收入任何藏品，点开一张卡片试试～</div>
+          <div v-else class="fav-list">
+            <button
+              v-for="f in favorites" :key="f.id" type="button" class="fav-row"
+              @click="openFromFavorites(f.id)"
+            >
+              <span class="fav-emoji">{{ f.emoji || '💮' }}</span>
+              <span class="fav-text">
+                <strong>{{ f.title }}</strong>
+                <small>{{ f.categoryName || '未分类' }} · {{ f.desc || '' }}</small>
+              </span>
+              <span class="fav-arrow">›</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -684,8 +926,130 @@ function onHotTag(tag) {
   background:linear-gradient(180deg,#9B6BD6,#6A3AA0);
 }
 
+/* ---------- 我的珍藏入口 ---------- */
+.nav-favorites{
+  position:relative; display:flex; align-items:center; gap:6px; overflow:hidden;
+  border:1px solid rgba(244,213,139,.75); cursor:pointer;
+  color:#fff; font-size:13px; letter-spacing:1px; font-family:inherit;
+  padding:8px 16px; border-radius:999px; transition:.22s var(--ease-out); white-space:nowrap;
+  background:linear-gradient(180deg, rgba(244,213,139,.32), rgba(231,184,90,.28));
+  box-shadow:0 4px 14px rgba(231,184,90,.28), inset 0 1px 0 rgba(255,255,255,.18);
+}
+.nav-favorites:hover{ color:#2b164a; background:linear-gradient(180deg,#F4D58B,#E7B85A); }
+
+/* ---------- 视图切换 ---------- */
+.view-switch{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:0 auto 18px; }
+.view-switch button{
+  border:1px solid rgba(255,179,200,.45); background:rgba(255,247,251,.08);
+  color:var(--rose); font-size:12.5px; letter-spacing:1px; font-family:inherit;
+  padding:7px 16px; border-radius:999px; cursor:pointer; transition:.2s var(--ease-out);
+}
+.view-switch button:hover{ color:#fff; background:rgba(255,111,156,.26); }
+.view-switch button.active{
+  color:#2b164a; font-weight:700;
+  background:linear-gradient(180deg,#F4D58B,#E7B85A);
+  border-color:var(--gold); box-shadow:0 4px 14px rgba(231,184,90,.45);
+}
+
+/* ---------- 卡片可点击 + 热度角标 ---------- */
+.card{ cursor:pointer; }
+.card-stat{ font-size:11px; color:var(--ink-soft); opacity:.75; letter-spacing:1px; }
+
+/* ---------- 加载更多 ---------- */
+.load-more{ display:flex; justify-content:center; margin-top:26px; }
+.more-btn{
+  border:1px solid rgba(255,179,200,.6); background:rgba(255,247,251,.12);
+  color:var(--rose); font-size:13px; letter-spacing:2px; font-family:inherit;
+  padding:10px 28px; border-radius:999px; cursor:pointer; transition:.2s var(--ease-out);
+}
+.more-btn:hover:not(:disabled){ color:#fff; background:linear-gradient(180deg,#FF8FB4,#E84A78); }
+.more-btn:disabled{ opacity:.6; cursor:default; }
+
+/* ---------- 弹层（详情 / 我的珍藏） ---------- */
+.modal-mask{
+  position:fixed; inset:0; z-index:60;
+  display:flex; align-items:center; justify-content:center; padding:20px;
+  background:rgba(20,8,40,.66);
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+}
+.modal-panel{
+  position:relative; width:min(560px,94vw); max-height:min(80vh,760px); overflow-y:auto;
+  padding:34px 32px 30px; text-align:center; border-radius:24px;
+  background:linear-gradient(160deg, rgba(255,253,254,.98) 0%, rgba(253,243,248,.96) 100%);
+  box-shadow:0 30px 80px rgba(20,8,40,.55), inset 0 0 0 1px rgba(255,179,200,.35), inset 0 1px 0 rgba(255,255,255,.8);
+}
+.modal-close{
+  position:absolute; top:14px; right:16px;
+  width:32px; height:32px; border-radius:50%; cursor:pointer;
+  border:1px solid rgba(155,107,214,.4); background:rgba(255,255,255,.7);
+  color:#6A3AA0; font-size:14px; transition:.2s;
+}
+.modal-close:hover{ background:#6A3AA0; color:#fff; }
+.modal-emoji{ font-size:44px; line-height:1.2; }
+.modal-title{
+  margin:8px 0 14px; font-size:22px; letter-spacing:2px; color:var(--ink);
+  font-family:Georgia,"Songti SC","STSong","SimSun",serif;
+}
+.modal-meta{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:16px; }
+.meta-chip{
+  font-size:11px; color:#fff; padding:3px 12px; border-radius:999px;
+  background:linear-gradient(180deg,#9B6BD6,#6A3AA0);
+}
+.meta-stat{ font-size:11.5px; color:var(--ink-soft); padding:3px 8px; }
+.modal-desc{ margin:0 0 14px; font-size:13px; color:var(--ink-soft); line-height:1.8; }
+.modal-content{
+  text-align:left; white-space:pre-wrap; word-break:break-word;
+  font-size:14px; line-height:1.95; color:var(--ink);
+  padding:18px 20px; border-radius:16px;
+  background:rgba(155,107,214,.07); border:1px solid rgba(155,107,214,.18);
+}
+.modal-author{ margin:14px 0 20px; text-align:right; font-size:12.5px; color:var(--ink-soft); letter-spacing:1px; }
+.modal-actions{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+.fav-btn, .modal-secondary{
+  border-radius:999px; cursor:pointer; font-family:inherit; font-size:13.5px; letter-spacing:1px;
+  padding:11px 24px; transition:.22s var(--ease-out);
+}
+.fav-btn{
+  border:1px solid rgba(232,74,120,.6); color:#fff;
+  background:linear-gradient(180deg,#FF8FB4,#E84A78);
+  box-shadow:0 6px 16px rgba(232,74,120,.4);
+}
+.fav-btn:hover{ filter:brightness(1.06); transform:translateY(-2px); }
+.fav-btn.on{
+  background:linear-gradient(180deg,#9B6BD6,#6A3AA0);
+  border-color:#6A3AA0; box-shadow:0 6px 16px rgba(106,58,160,.4);
+}
+.modal-secondary{ border:1px solid rgba(155,107,214,.45); color:#6A3AA0; background:transparent; }
+.modal-secondary:hover{ background:rgba(155,107,214,.12); }
+.modal-state{ padding:34px 10px; font-size:14px; color:var(--ink-soft); letter-spacing:1px; }
+.modal-state.error{ color:#C93363; }
+
+/* ---------- 我的珍藏列表 ---------- */
+.fav-list{ display:flex; flex-direction:column; gap:10px; text-align:left; margin-top:6px; }
+.fav-row{
+  display:flex; align-items:center; gap:12px; width:100%; cursor:pointer;
+  padding:12px 14px; border-radius:14px; font-family:inherit;
+  border:1px solid rgba(155,107,214,.2); background:rgba(255,255,255,.75);
+  transition:.2s var(--ease-out);
+}
+.fav-row:hover{ background:rgba(255,179,200,.16); transform:translateX(3px); }
+.fav-emoji{ font-size:24px; flex:0 0 auto; }
+.fav-text{ display:flex; flex-direction:column; gap:3px; min-width:0; flex:1; }
+.fav-text strong{ font-size:14px; color:var(--ink); font-weight:600; }
+.fav-text small{
+  font-size:11.5px; color:var(--ink-soft);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.fav-arrow{ font-size:22px; color:#9B6BD6; }
+
+.modal-enter-active,.modal-leave-active{ transition:opacity .25s; }
+.modal-enter-active .modal-panel,.modal-leave-active .modal-panel{ transition:transform .28s var(--ease-out); }
+.modal-enter-from,.modal-leave-to{ opacity:0; }
+.modal-enter-from .modal-panel,.modal-leave-to .modal-panel{ transform:translateY(18px) scale(.97); }
+
 @media (max-width:680px){
   .nav{ flex-wrap:wrap; gap:10px; }
   .brand-sub{ display:none; }
+  .modal-panel{ padding:30px 20px 24px; }
 }
 </style>

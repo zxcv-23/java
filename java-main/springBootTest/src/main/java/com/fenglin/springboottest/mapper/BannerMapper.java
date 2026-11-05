@@ -22,4 +22,13 @@ public interface BannerMapper extends BaseMapper<Banner> {
             "WHERE deleted = 0 AND status = 1 " +
             "ORDER BY sort ASC, id ASC LIMIT 8")
     List<BannerVO> listActive();
+
+    /**
+     * 后台管理列表：包含隐藏的标语，按排序、ID 升序，最多 50 条。
+     */
+    @Select("SELECT id, title, subtitle, tag, accent, sort, status " +
+            "FROM banner " +
+            "WHERE deleted = 0 " +
+            "ORDER BY sort ASC, id ASC LIMIT 50")
+    List<BannerVO> manageList();
 }
