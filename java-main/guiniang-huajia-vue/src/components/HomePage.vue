@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import HeroCrest from './HeroCrest.vue'
 import BannerCarousel from './BannerCarousel.vue'
+import MyGames from './MyGames.vue'
 
 // 登录后由父组件传入的当前用户（来自 localStorage/sessionStorage 的 guiniang_user）
 const props = defineProps({
@@ -444,6 +445,13 @@ function openFromFavorites(id) {
   showFavorites.value = false
   openDetail(id)
 }
+
+// ---------- 我的游戏（侧边栏入口 · 独立浮层，不影响首页原有内容） ----------
+const showMyGames = ref(false)
+function openMyGames() {
+  showMyGames.value = true
+  railOpen.value = false
+}
 </script>
 
 <template>
@@ -503,6 +511,10 @@ function openFromFavorites(id) {
       >
         <span class="ri-ico">{{ railIcons[item] || '💮' }}</span>
         <span class="ri-txt">{{ item }}</span>
+      </button>
+      <button class="rail-item rail-games" type="button" @click="openMyGames" title="打开我的游戏">
+        <span class="ri-ico">🎐</span>
+        <span class="ri-txt">我的游戏</span>
       </button>
     </aside>
 
@@ -664,6 +676,9 @@ function openFromFavorites(id) {
         </div>
       </div>
     </transition>
+
+    <!-- ============ 我的游戏（侧边栏打开的独立浮层） ============ -->
+    <MyGames v-if="showMyGames" @close="showMyGames = false" />
   </div>
 </template>
 
@@ -746,6 +761,15 @@ function openFromFavorites(id) {
   .rail{ top:0; z-index:40; width:min(240px,80vw); transform:translateX(-110%); border-radius:0; }
   .rail.open{ transform:none; box-shadow:20px 0 60px rgba(13,4,32,.6); }
 }
+
+/* ---------- 侧边栏「我的游戏」入口（新增项，其余侧栏样式不变） ---------- */
+.rail-games{
+  margin-top:8px; padding-top:15px;
+  border-top:1px dashed rgba(244,213,139,.32);
+  border-radius:0 0 14px 14px;
+}
+.rail-games .ri-ico{ filter:drop-shadow(0 2px 6px rgba(244,213,139,.6)); }
+.rail-games:hover{ color:var(--gold); background:rgba(244,213,139,.14); }
 
 .nav-user{ display:flex; align-items:center; gap:10px; }
 
