@@ -14,8 +14,11 @@ public class PartnerSiteVO {
     /** 站点展示名（按钮文案） */
     private String name;
 
-    /** 跳转地址 */
+    /** 跳转地址（相对路径会在 /api/partner/site 里补全为绝对地址） */
     private String url;
+
+    /** 页面上「去 Google 搜相亲资料」的外链地址 */
+    private String googleUrl;
 
     /** 是否启用该跳转入口 */
     private Boolean enabled;

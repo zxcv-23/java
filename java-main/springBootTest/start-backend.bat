@@ -7,12 +7,12 @@ REM  springBootTest 后端一键启动脚本 (GBK 编码, 双击运行)
 REM  作用:
 REM    1. 清除 SERVER__PORT / SERVER__HOST 环境变量 (防止覆盖 server.port)
 REM    2. 结束占用 8081 端口的旧进程
-REM    3. guiniang 库不存在时自动执行 sql\init.sql 建库建表
-REM       (并检测旧版表结构, 发现时提示重建)
-REM    4. target 下没有 jar 时自动用 Maven 构建 (跳过测试)
+REM    3. dd 库不存在时自动建库 + 建表 (幂等, 绝不 DROP 库/表, 不清空注册用户)
+REM       (库已存在则检测 user 表缺列并幂等补齐)
+REM    4. 每次都用 Maven 重新打包 (跳过测试), 避免启动旧 jar
 REM    5. 在 8081 端口启动后端
 REM  说明: 全部使用相对路径, 项目目录整体移动后依然可用。
-REM  注意: 每次开机 target 文件夹会被删除, 脚本会自动重新构建。
+REM  注意: 数据库名必须与 application-dev.properties 的 spring.datasource.url 一致。
 REM ============================================================
 
 cd /d "%~dp0"
@@ -37,13 +37,13 @@ if not exist "%MYSQL%" (
     echo [警告] 未找到 mysql.exe, 跳过数据库检查
     goto :CHECKJAR
 )
-"%MYSQL%" -uroot -p123456 -e "USE guiniang;" >nul 2>&1
+"%MYSQL%" -uroot -p123456 -e "USE dd;" >nul 2>&1
 if errorlevel 1 goto :INITDB
 
 REM 库已存在: 检查 user 表字段是否与 entity/User.java 一致
 REM 缺列时自动执行 sql\fix_user_table.sql 补齐(幂等, 不删除任何数据)
 set "COLCNT="
-for /f %%A in ('"%MYSQL%" -uroot -p123456 -N -e "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='guiniang' AND TABLE_NAME='user' AND COLUMN_NAME IN ('email','phone','gender','bio','token_version');" 2^>nul') do set "COLCNT=%%A"
+for /f %%A in ('"%MYSQL%" -uroot -p123456 -N -e "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='dd' AND TABLE_NAME='user' AND COLUMN_NAME IN ('email','phone','gender','bio','token_version');" 2^>nul') do set "COLCNT=%%A"
 if not defined COLCNT goto :DBOK
 if "%COLCNT%"=="5" goto :DBOK
 
@@ -57,21 +57,20 @@ if exist "sql\fix_user_table.sql" (
 goto :CHECKJAR
 
 :INITDB
-echo [数据库] 正在执行 sql\init.sql 建库建表 ...
-"%MYSQL%" -uroot -p123456 -e "DROP DATABASE IF EXISTS guiniang;" >nul 2>&1
+echo [数据库] 正在创建 dd 库并初始化表结构 (幂等, 不会删除任何已有数据) ...
 "%MYSQL%" -uroot -p123456 < "sql\init.sql" >nul 2>&1
 if errorlevel 1 goto :DBFAIL
-echo [数据库] guiniang 库初始化完成
+"%MYSQL%" -uroot -p123456 -D dd < "src\main\resources\schema.sql" >nul 2>&1
+"%MYSQL%" -uroot -p123456 -D dd < "src\main\resources\data.sql" >nul 2>&1
+echo [数据库] dd 库初始化完成
 goto :CHECKJAR
 
 :DBOK
-echo [数据库] guiniang 库已存在且结构正确, 跳过初始化
+echo [数据库] dd 库已存在且结构正确, 跳过初始化
 
-REM --- 5. jar 不存在时自动构建
+REM --- 5. 每次都重新打包, 避免启动旧 jar (旧 jar 里可能还是旧库名/旧代码)
 :CHECKJAR
-if exist "target\springBootTest-0.0.1-SNAPSHOT.jar" goto :RUN
-
-echo [构建] 未发现 jar, 开始 Maven 构建 (跳过测试) ...
+echo [构建] 重新打包 (确保使用最新代码与配置) ...
 set "MVN="
 REM 优先使用本地缓存的 Maven 发行包
 for /d %%D in ("%USERPROFILE%\.m2\wrapper\dists\apache-maven-*") do (
@@ -94,7 +93,7 @@ if not defined MVN (
     exit /b 1
 )
 echo [构建] 使用 Maven: %MVN%
-call "%MVN%" -DskipTests clean package
+call "%MVN%" -DskipTests package
 if errorlevel 1 goto :BUILDFAIL
 if not exist "target\springBootTest-0.0.1-SNAPSHOT.jar" goto :BUILDFAIL
 

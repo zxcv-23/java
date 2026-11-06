@@ -7,10 +7,10 @@
 -- 用法：mysql -uroot -p123456 < sql\fix_admin_table.sql
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS `guiniang`
+CREATE DATABASE IF NOT EXISTS `dd`
   DEFAULT CHARACTER SET utf8mb4
   DEFAULT COLLATE utf8mb4_general_ci;
-USE `guiniang`;
+USE `dd`;
 
 -- 1. 表不存在时按完整结构建表
 CREATE TABLE IF NOT EXISTS `admin` (
@@ -32,12 +32,12 @@ CREATE TABLE IF NOT EXISTS `admin` (
 
 -- 2. 补齐缺失列（已存在则跳过，不报错、不动数据）
 SET @sql := IF((SELECT COUNT(*) FROM information_schema.COLUMNS
-  WHERE TABLE_SCHEMA='guiniang' AND TABLE_NAME='admin' AND COLUMN_NAME='token_version')=0,
+  WHERE TABLE_SCHEMA='dd' AND TABLE_NAME='admin' AND COLUMN_NAME='token_version')=0,
   'ALTER TABLE `admin` ADD COLUMN `token_version` BIGINT NOT NULL DEFAULT 0', 'DO 0');
 PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
 -- 3. 结果自检：应输出 1
 SELECT COUNT(*) AS required_cols
 FROM information_schema.COLUMNS
-WHERE TABLE_SCHEMA='guiniang' AND TABLE_NAME='admin'
+WHERE TABLE_SCHEMA='dd' AND TABLE_NAME='admin'
   AND COLUMN_NAME = 'token_version';

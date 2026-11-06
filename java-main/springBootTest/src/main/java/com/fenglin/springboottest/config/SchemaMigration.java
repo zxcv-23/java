@@ -32,6 +32,11 @@ public class SchemaMigration implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        // 兜底：即使 schema.sql 因故没被执行（脚本被跳过 / 全新空库），
+        // 也保证用户表存在，注册接口不会因为「表不存在」而丢数据。
+        // CREATE TABLE IF NOT EXISTS 不会覆盖或清空已有数据。
+        ensureUserTable();
+
         // 条目浏览量（本次新增功能）
         ensureColumn("item", "view_count",
                 "ALTER TABLE `item` ADD COLUMN `view_count` BIGINT NOT NULL DEFAULT 0 COMMENT '浏览次数'");
@@ -66,6 +71,32 @@ public class SchemaMigration implements ApplicationRunner {
             }
         } catch (Exception e) {
             log.warn("数据库迁移：检查/补齐 {}.{} 失败（不阻断启动）：{}", table, column, e.getMessage());
+        }
+    }
+
+    /** 用户表兜底：IF NOT EXISTS 建表，已有用户数据一律保留 */
+    private void ensureUserTable() {
+        try {
+            jdbc.execute("CREATE TABLE IF NOT EXISTS `user` (" +
+                    "`id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID'," +
+                    "`username` VARCHAR(50) NOT NULL COMMENT '登录用户名'," +
+                    "`password` VARCHAR(100) NOT NULL COMMENT 'BCrypt密码'," +
+                    "`nickname` VARCHAR(50) DEFAULT NULL," +
+                    "`avatar` VARCHAR(255) DEFAULT NULL," +
+                    "`email` VARCHAR(100) DEFAULT NULL," +
+                    "`phone` VARCHAR(20) DEFAULT NULL," +
+                    "`gender` TINYINT NOT NULL DEFAULT 0," +
+                    "`bio` VARCHAR(255) DEFAULT NULL," +
+                    "`token_version` BIGINT NOT NULL DEFAULT 0," +
+                    "`status` TINYINT NOT NULL DEFAULT 1," +
+                    "`create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP," +
+                    "`update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
+                    "`deleted` TINYINT NOT NULL DEFAULT 0," +
+                    "PRIMARY KEY (`id`)," +
+                    "UNIQUE KEY `uk_username` (`username`)" +
+                    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='用户表'");
+        } catch (Exception e) {
+            log.warn("数据库迁移：确保 user 表存在失败（不阻断启动）：{}", e.getMessage());
         }
     }
 

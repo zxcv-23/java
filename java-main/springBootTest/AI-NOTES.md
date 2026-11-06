@@ -4,7 +4,7 @@
 
 ## 项目概况
 - Spring Boot 3.4.5 + Java 17/21 + MyBatis-Plus 3.5.7 + MySQL 8，端口 **8081**，profile=dev
-- 当前版本路径：`D:\workSpace\java\java-main\springBootTest`（前端同级 `guiniang-huajia-vue`）
+- 当前版本路径：`C:\Users\user\IdeaProjects\java\java-main\springBootTest`（前端同级 `guiniang-huajia-vue`）
 - 前台注册/登录 + 个人中心：
   - `POST /api/user/register` `{"username","password"}`（用户名 2~20 位，密码 6~32 位，BCrypt）
   - `POST /api/user/login` `{"account","password"}` → 用户信息 + **scope=user 的 JWT**
@@ -52,8 +52,8 @@
 
 ## 环境事实（已验证 2026-11-04）
 - Java：本机 `java -version` 为 **Zulu 21.0.10**；pom `<java.version>17</java.version>` 以 `--release 17` 编译通过
-- MySQL 8：`C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe`，root/123456，库 `guiniang`，3306 在跑
-- Maven：PATH 里没有；可用缓存 `C:\Users\Administrator\.m2\wrapper\dists\apache-maven-3.9.9-bin\4nf9hui3q3djbarqar9g711ggc\apache-maven-3.9.9`
+- MySQL 8：`C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe`，root/123456，**业务库名是 `dd`**（不是 `guiniang`），3306 在跑
+- Maven：PATH 里没有；可用缓存 `C:\Users\user\.m2\wrapper\dists\apache-maven-3.9.9-bin\4nf9hui3q3djbarqar9g711ggc\apache-maven-3.9.9`
   - **Git Bash 里 `mvn` / `mvnw` 会报 "Unable to access jarfile"，且本环境 PATH 缺 coreutils（ls/head/dirname 不可用）**
   - 可靠构建方式：直接用 java 调 classworlds 启动器，例如
     ```bash
@@ -127,9 +127,9 @@ curl -H "Authorization: Bearer <token>" "http://127.0.0.1:8081/api/manage/items?
 - 旧库无需手工执行 `fix_*.sql` 也能自愈；手工脚本仍保留作兜底。
 
 ### 本机环境事实（2026-11-05 复核）
-- 项目实际路径：`D:\workSpace\java\java-main\springBootTest`（不再是 `C:\Users\user\IdeaProjects\...`）
+- 项目实际路径：`C:\Users\user\IdeaProjects\java\java-main\springBootTest`（2026-11-06 复核，D 盘那份已不存在）
 - Java：`java -version` 为 **Zulu 21.0.10**；pom `<java.version>17</java.version>` 以 `--release 17` 编译，正常通过
-- Maven home：`C:\Users\Administrator\.m2\wrapper\dists\apache-maven-3.9.9-bin\4nf9hui3q3djbarqar9g711ggc\apache-maven-3.9.9`
+- Maven home：`C:\Users\user\.m2\wrapper\dists\apache-maven-3.9.9-bin\4nf9hui3q3djbarqar9g711ggc\apache-maven-3.9.9`
 - 可靠构建命令（Git Bash 里直接跑 `mvn` 仍会报 Unable to access jarfile）：
   ```bash
   java -classpath "<maven-home>/boot/plexus-classworlds-2.8.0.jar" \
@@ -146,7 +146,7 @@ curl -H "Authorization: Bearer <token>" "http://127.0.0.1:8081/api/manage/items?
 按钮说明新前端已生效，但数据为 0。
 
 ### 根因（不是数据库没连上）
-- `application-dev.properties`：`jdbc:mysql://127.0.0.1:3306/guiniang`，root/123456，
+- `application-dev.properties`：`jdbc:mysql://127.0.0.1:3306/dd`（旧笔记里的 guiniang 已作废），root/123456，
   `spring.sql.init.mode=always` 启动即幂等建表灌数据。MySQL 3306 与 8081 都在监听，
   库内 `item=18 / category=13 / banner=4`，`item.view_count` 列也已存在。
 - 真正原因：**8081 跑的是改造前的旧 jar**。`log/xx.log` 显示 PID 2760 于 **14:05:06** 启动，
@@ -177,3 +177,96 @@ item 18 的浏览量已全部清理，库内回到 `18 / 13 / 4`。
    `target` 下没有 jar 时才会自动构建，jar 已存在会直接 `:RUN` 跑旧包，所以代码改完别只双击脚本，
    要么先删 `target/*.jar`，要么显式重新 package。
 3. 8081 被 jar 占用导致 `mvn package` 的 repackage 失败时，输出到独立目录再覆盖回主 target。
+
+## 2026-11-06：后端起不来 + 「注册的用户一直没保存」根因与修复
+
+### 现场事实（已用 mysql / binlog 核实）
+- 本机 MySQL 只有业务库 **`dd`**（admin=1, banner=4, category=13, item=18, **user=0**），
+  **没有 `guiniang` 库**；`dd.user` 的 AUTO_INCREMENT 为 NULL，说明这张表从未插入过任何行。
+- binlog（`client087-bin.000002`）只有一次 `CREATE DATABASE dd` + 导入 dump 的 36 条 INSERT
+  （item/category/banner/admin），**没有任何 `INSERT INTO user`，也没有 guiniang 字样**。
+  即：之前那些「注册成功」根本没有写进这台 MySQL（可能是在纯前端演示页上注册的）。
+- `guiniang-huajia-vue/guinhuajia-Vue.html` 是**单文件前端演示页**，
+  `onRegisterSubmit()` 只有 `setTimeout` 假成功，不发任何请求；
+  真正调后端的是 Vite 项目的 `RegisterCard.vue` 和 `static/center.html`（`POST /api/user/register` → 8081）。
+- `log/xx.log` 08:53:56 显示应用启动直接失败：`No schema scripts found at location 'classpath:schema.sql'`，
+  8081 当时也没有监听，所以后端根本没在提供服务。
+
+### 三个叠加的根因
+1. **库名写错**：`application-dev.properties` 连 `guiniang`，实际库是 `dd`。
+   即使能启动，也会连到不存在的库；而用户在 Navicat 里看的是 `dd`。
+2. **启动即崩**：`spring.sql.init.mode=always` 配了**硬性** `classpath:schema.sql`，
+   IDEA 增量编译时资源偶尔没进 classpath，缺脚本就抛异常让整个 ApplicationContext 启动失败。
+3. **启动脚本会删库**：`start-backend.bat` 在 `USE guiniang` 失败时会
+   `DROP DATABASE IF EXISTS guiniang` 再跑含 `DROP TABLE IF EXISTS user` 的 `init.sql`，
+   `start-all.bat` 每次都会走这条分支 —— 这是「数据看起来总被清空」的最大隐患。
+
+### 修复（全部幂等、不删任何数据）
+- `application-dev.properties`：库名改 `dd`；脚本位置改为 **`optional:classpath:schema.sql` /
+  `optional:classpath:data.sql`**（Spring Boot 3.4 的 `optional:` 前缀：脚本缺失时跳过，不再阻断启动），
+  `continue-on-error=true` 保留。
+- `application.properties`：修好写坏的 `logging.pattern.file`（原值把整行前缀写进了日志文件），
+  修正包名 `com.fengling` → `com.fenglin.springboottest`。
+- `SchemaMigration.java`：新增 `ensureUserTable()`，用 `CREATE TABLE IF NOT EXISTS` 兜底，
+  即使 SQL 脚本被跳过也保证 user 表存在；`schema.sql` 的 user 定义补上 `token_version`。
+- `start-backend.bat`：**删掉 DROP DATABASE**，库名统一 `dd`，建库后用
+  `mysql -D dd < schema.sql` / `data.sql` 幂等初始化；并改成**每次都重新打包**，避免跑旧 jar。
+- `sql/init.sql` 改为只 `CREATE DATABASE IF NOT EXISTS dd; USE dd;`（不再 DROP TABLE）；
+  `sql/fix_user_table.sql` / `fix_admin_table.sql` 的库名同步改 `dd`。
+- 判定是否修好：`GET http://127.0.0.1:8081/user/test` 能通，
+  且 `SELECT COUNT(*) FROM dd.user;` 在注册后会增加。
+
+### 注意
+- 之前注册过的账号**无法从这台 MySQL 恢复**（binlog / 数据目录都没有对应记录）。
+  `sql/backup/user_backup_20261102.sql` 里只有 2026-11-02 的两个旧账号 `ff` / `probe_ai_01`，
+  且是旧表结构（缺 email/phone/gender/bio/token_version），需要时可按新结构手工 INSERT，别整文件导入（含 DROP TABLE）。
+- 千万别把 `sql/guiniang.sql`（Navicat dump）直接导进已有库：它每个表前都有 `DROP TABLE IF EXISTS`。
+
+### 验证记录（2026-11-06）
+- Maven `-DskipTests package` → BUILD SUCCESS；用新 jar 在 **8083** 隔离端口启动成功，`/user/test` → 200。
+- `POST /api/user/register` → `code=200`，`dd.user` 行数 **0 → 1**（id=1 / status=1 / token_version=0）；
+  同账号 `POST /api/user/login` → 200 并返回 JWT；`GET /api/home` → 200（分类数据正常）。
+  测试账号 `wb_verify_20261106` 已删除，`dd.user` 回到 0 行。
+- 排查期间 `dd` 库曾被外部操作 `DROP DATABASE dd`（binlog 可查），
+  已用 `sql/guiniang.sql` 原样恢复：admin=1 / banner=4 / category=13 / item=18 / user=0，
+  启动时 `SchemaMigration` 还补建了 `favorite` 表。**没有丢任何业务数据。**
+- 复验方式：`GET http://127.0.0.1:8081/user/test` 能通；注册一个账号后
+  `SELECT COUNT(*) FROM dd.user;` 应 +1（记得在 Navicat 里切到「数据」页看，设计页只有字段定义）。
+
+## 相亲阁跳转页（2026-11-06 新增）
+
+项目原本就有一个「前往相亲阁」按钮（`AdminDashboard.vue` + `PartnerController`），
+但 `partner.site.url` 指向 `127.0.0.1:5173/` 前端首页，并没有真正的相亲展示内容。
+本次把它补成一个可用的**搜索式相亲展示 / 挑选页**。
+
+**入口位置（同日调整）**：按钮已从后台管理页**移到首页导航栏**
+（`guiniang-huajia-vue/src/components/HomePage.vue` 的 `.nav-partner`）。
+`AdminDashboard.vue` 里的 `partnerSite` / `fetchPartnerSite()` / `openPartnerSite()` / `.partner-link`
+整段已删除；首页通过 `/api/partner/site` 读同一份配置，跳转时带 `from=home`，
+`dating.html` 只要 URL 带 `from` 参数就显示「从主站跳转过来」的提示。
+
+### 新增文件
+- `src/main/resources/static/dating.html`：Google 风格极简搜索页（浅色）、性别/关键词/「只看已心动」筛选、
+  嘉宾卡片、详情弹层、心动名单抽屉（存 `localStorage`，key `dating_picks_v1`）。
+  右上角有「去 Google 搜相亲资料」外链，页面会先读 `/api/partner/site` 的 `googleUrl`。
+- `controller/DatingController.java`：`GET /api/dating/candidates?keyword=&gender=&limit=`。
+- `dto/DatingCandidateVO.java`：脱敏嘉宾视图。
+
+### 接口 / 端点
+| 端点 | 说明 |
+| --- | --- |
+| `GET /dating.html` | 相亲展示页（后端静态资源，换端口不用改配置） |
+| `GET /api/dating/candidates` | 只读嘉宾列表，`status=1`，最多 100 条 |
+| `GET /api/partner/site` | 返回 `{name,url,googleUrl,enabled}`；相对 url 会按当前请求补全为绝对地址 |
+| `GET /go/partner` | 302 到 `partner.site.url`（默认 `/dating.html`） |
+| `GET /go/google` | 302 到 `partner.site.google-url` |
+
+### 重要约定
+- **隐私**：`/api/dating/candidates` 是公开接口，只投影 id / nickname / avatar / gender / bio / 入阁日期，
+  **不返回** password、phone、email、username、tokenVersion，也不要直接返回 `User` 实体。
+- **演示数据兜底**：`dd.user` 目前 0 行，页面在真实列表为空或后端不可用时改展示 6 位内置演示嘉宾，
+  并在页面顶部黄条明确标注「演示资料」；注册用户出现后自动切换为真实数据。演示数据不入库。
+- **改目标站**：只想跳转外部相亲网站的话，把 `application-dev.properties` 的
+  `partner.site.url` 改成那个完整网址即可，一行搞定；写相对路径则留在本服务内。
+  目标协议只允许 `/`（不含 `//`）与 `http(s)://`，避免开放重定向。
+- Google 外链在国内网络通常不可直接访问，需要的话把 `partner.site.google-url` 换成任意可访问的搜索站。

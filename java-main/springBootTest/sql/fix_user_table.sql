@@ -6,10 +6,10 @@
 -- 用法：mysql -uroot -p123456 < sql\fix_user_table.sql
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS `guiniang`
+CREATE DATABASE IF NOT EXISTS `dd`
   DEFAULT CHARACTER SET utf8mb4
   DEFAULT COLLATE utf8mb4_general_ci;
-USE `guiniang`;
+USE `dd`;
 
 -- 1. 表都不存在时先按完整结构建表
 CREATE TABLE IF NOT EXISTS `user` (
@@ -33,32 +33,32 @@ CREATE TABLE IF NOT EXISTS `user` (
 
 -- 2. 逐个补齐缺失列（已存在则跳过，不报错、不动数据）
 SET @sql := IF((SELECT COUNT(*) FROM information_schema.COLUMNS
-  WHERE TABLE_SCHEMA='guiniang' AND TABLE_NAME='user' AND COLUMN_NAME='email')=0,
+  WHERE TABLE_SCHEMA='dd' AND TABLE_NAME='user' AND COLUMN_NAME='email')=0,
   'ALTER TABLE `user` ADD COLUMN `email` VARCHAR(100) DEFAULT NULL', 'DO 0');
 PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
 SET @sql := IF((SELECT COUNT(*) FROM information_schema.COLUMNS
-  WHERE TABLE_SCHEMA='guiniang' AND TABLE_NAME='user' AND COLUMN_NAME='phone')=0,
+  WHERE TABLE_SCHEMA='dd' AND TABLE_NAME='user' AND COLUMN_NAME='phone')=0,
   'ALTER TABLE `user` ADD COLUMN `phone` VARCHAR(20) DEFAULT NULL', 'DO 0');
 PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
 SET @sql := IF((SELECT COUNT(*) FROM information_schema.COLUMNS
-  WHERE TABLE_SCHEMA='guiniang' AND TABLE_NAME='user' AND COLUMN_NAME='gender')=0,
+  WHERE TABLE_SCHEMA='dd' AND TABLE_NAME='user' AND COLUMN_NAME='gender')=0,
   'ALTER TABLE `user` ADD COLUMN `gender` TINYINT DEFAULT 0', 'DO 0');
 PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
 SET @sql := IF((SELECT COUNT(*) FROM information_schema.COLUMNS
-  WHERE TABLE_SCHEMA='guiniang' AND TABLE_NAME='user' AND COLUMN_NAME='bio')=0,
+  WHERE TABLE_SCHEMA='dd' AND TABLE_NAME='user' AND COLUMN_NAME='bio')=0,
   'ALTER TABLE `user` ADD COLUMN `bio` VARCHAR(255) DEFAULT NULL', 'DO 0');
 PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
 SET @sql := IF((SELECT COUNT(*) FROM information_schema.COLUMNS
-  WHERE TABLE_SCHEMA='guiniang' AND TABLE_NAME='user' AND COLUMN_NAME='token_version')=0,
+  WHERE TABLE_SCHEMA='dd' AND TABLE_NAME='user' AND COLUMN_NAME='token_version')=0,
   'ALTER TABLE `user` ADD COLUMN `token_version` BIGINT NOT NULL DEFAULT 0', 'DO 0');
 PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
 -- 3. 结果自检：应输出 5
 SELECT COUNT(*) AS required_cols
 FROM information_schema.COLUMNS
-WHERE TABLE_SCHEMA='guiniang' AND TABLE_NAME='user'
+WHERE TABLE_SCHEMA='dd' AND TABLE_NAME='user'
   AND COLUMN_NAME IN ('email','phone','gender','bio','token_version');

@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `phone`        VARCHAR(20)  DEFAULT NULL            COMMENT '手机号',
   `gender`       TINYINT      NOT NULL DEFAULT 0      COMMENT '性别：0-未知 1-男 2-女',
   `bio`          VARCHAR(255) DEFAULT NULL            COMMENT '个性签名/简介',
+  `token_version` BIGINT       NOT NULL DEFAULT 0     COMMENT '令牌版本：改密/登出时自增使旧 token 失效',
   `status`       TINYINT      NOT NULL DEFAULT 1      COMMENT '账号状态：1-正常 0-禁用',
   `create_time`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',

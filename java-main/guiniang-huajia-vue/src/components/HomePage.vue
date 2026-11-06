@@ -18,6 +18,45 @@ const HOME_API = API_BASE + '/api/home'
 const ITEMS_API = API_BASE + '/api/items'
 const FAV_API = API_BASE + '/api/profile/favorites'
 
+// ---------- 姻缘阁（相亲展示页）跳转入口 ----------
+// 由后端 application-dev.properties 的 partner.site.* 统一配置；
+// 后端在线时读 /api/partner/site 覆盖，后端未起则用兜底地址，入口始终可点。
+const partnerSite = ref({
+  name: '姻缘阁 · 寻缘',
+  url: 'http://127.0.0.1:8081/dating.html',
+  enabled: true
+})
+
+async function fetchPartnerSite() {
+  try {
+    const res = await fetch(API_BASE + '/api/partner/site')
+    if (!res.ok) return
+    const json = await res.json()
+    if (json && json.code === 200 && json.data && json.data.url) {
+      partnerSite.value = {
+        name: json.data.name || partnerSite.value.name,
+        url: json.data.url,
+        enabled: json.data.enabled !== false
+      }
+    }
+  } catch (e) {
+    // 后端未起：保留兜底地址
+  }
+}
+
+function openPartnerSite() {
+  if (!partnerSite.value.enabled) { flashToast('姻缘阁暂未开放～'); return }
+  let href = partnerSite.value.url
+  try {
+    const u = new URL(href, window.location.href)
+    u.searchParams.set('from', 'home')
+    href = u.toString()
+  } catch (e) { /* 非标准地址时保持原样 */ }
+  const win = window.open(href, '_blank', 'noopener,noreferrer')
+  if (!win) window.location.href = href  // 弹窗被拦截时降级为当前页跳转
+  else flashToast(`已为你打开「${partnerSite.value.name}」♥`)
+}
+
 // ---------- 导航栏 ----------
 const navItems = ['首页', '姻缘簿', '花轿信使', '红妆阁', '往生簿']
 const activeNav = ref('首页')
@@ -102,7 +141,10 @@ const resultTitle = computed(() => {
   return `寻得 ${n} 段姻缘`
 })
 
-onMounted(fetchHome)
+onMounted(() => {
+  fetchHome()
+  fetchPartnerSite()
+})
 
 async function fetchHome() {
   try {
@@ -419,6 +461,15 @@ function openFromFavorites(id) {
         <span class="admin-ico">🛡️</span> 后台管理
       </button>
 
+      <!-- 姻缘阁入口：从后台管理迁入首页，目标地址由后端 partner.site.* 配置 -->
+      <button
+        v-if="partnerSite.enabled" class="nav-partner" type="button"
+        :title="'前往 ' + partnerSite.name + '（' + partnerSite.url + '）'"
+        @click="openPartnerSite"
+      >
+        <span class="partner-ico">↗</span> {{ partnerSite.name }}
+      </button>
+
       <button class="nav-profile" type="button" @click="goProfile" title="进入个人中心">
         <span class="profile-ico">💞</span> 个人中心
       </button>
@@ -733,6 +784,28 @@ function openFromFavorites(id) {
   animation:shimmer 5s linear infinite; opacity:0; transition:opacity .25s;
 }
 .nav-profile:hover::after{ opacity:.3; }
+
+/* ---------- 姻缘阁入口按钮（从后台管理迁入首页，描金更醒目） ---------- */
+.nav-partner{
+  position:relative; display:flex; align-items:center; gap:6px; overflow:hidden;
+  border:1px solid rgba(244,213,139,.85); cursor:pointer;
+  color:#fff; font-size:13px; letter-spacing:1px; font-family:inherit;
+  padding:8px 16px; border-radius:999px; transition:.22s var(--ease-out); white-space:nowrap;
+  background:linear-gradient(180deg, rgba(232,74,120,.50), rgba(155,107,214,.50));
+  box-shadow:0 4px 14px rgba(232,74,120,.42), inset 0 1px 0 rgba(255,255,255,.22);
+}
+.nav-partner:hover{
+  color:#fff;
+  background:linear-gradient(180deg,#E84A78,#7B4BB5);
+  box-shadow:0 6px 20px rgba(232,74,120,.6);
+}
+.nav-partner .partner-ico{ font-size:15px; color:var(--gold); }
+.nav-partner::after{
+  content:""; position:absolute; inset:0; border-radius:999px;
+  background:var(--sheen); background-size:220% 100%;
+  animation:shimmer 5s linear infinite; opacity:0; transition:opacity .25s;
+}
+.nav-partner:hover::after{ opacity:.35; }
 .user-chip{
   display:flex; align-items:center; gap:8px;
   padding:5px 12px 5px 6px; border-radius:999px;
@@ -1047,6 +1120,10 @@ function openFromFavorites(id) {
 .modal-enter-from,.modal-leave-to{ opacity:0; }
 .modal-enter-from .modal-panel,.modal-leave-to .modal-panel{ transform:translateY(18px) scale(.97); }
 
+/* 多了一个姻缘阁入口，中等宽度提前换行，避免按钮挤成一团 */
+@media (max-width:960px){
+  .nav{ flex-wrap:wrap; gap:10px; }
+}
 @media (max-width:680px){
   .nav{ flex-wrap:wrap; gap:10px; }
   .brand-sub{ display:none; }
