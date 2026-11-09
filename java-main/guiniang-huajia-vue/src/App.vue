@@ -10,9 +10,10 @@ import AdminLogin from './components/AdminLogin.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import PersonalCenter from './components/PersonalCenter.vue'
 import BackendStatusBanner from './components/BackendStatusBanner.vue'
+import MemoBoard from './components/MemoBoard.vue'
 
 const heartLayer = ref(null)
-// 模式：login | register | home | admin-login | admin
+// 模式：login | register | home | admin-login | admin | profile | memo
 const mode = ref('login')
 const currentUser = ref(null)
 const currentAdmin = ref(null)
@@ -70,6 +71,7 @@ function logout() {
   window.sessionStorage.removeItem('guiniang_user')
   currentUser.value = null
   pendingProfile = false
+  pendingMemo = false
   mode.value = 'login'
 }
 
@@ -87,9 +89,10 @@ function goAdmin() {
   }
 }
 
-// ---------- 个人中心路由 ----------
-// 未登录时点了「个人中心」→ 先去登录，登录成功后自动回到个人资料编辑页
+// ---------- 个人中心 / 备忘录路由 ----------
+// 未登录时点了需要登录的页面 → 先去登录，登录成功后自动回到目标页
 let pendingProfile = false
+let pendingMemo = false
 
 // 从首页导航栏「个人中心」进入：已登录直接进编辑页，否则先去登录页
 function goProfile() {
@@ -108,16 +111,37 @@ function profileNeedLogin() {
   mode.value = 'login'
 }
 
+// ---------- 备忘录路由 ----------
+// 备忘录需要前台用户 JWT：未登录先去登录，登录成功后自动回到备忘录
+function goMemo() {
+  if (currentUser.value && currentUser.value.token) {
+    pendingMemo = false
+    mode.value = 'memo'
+  } else {
+    pendingMemo = true
+    mode.value = 'login'
+  }
+}
+
+// 备忘录里登录失效 → 回登录页，登录成功后仍回到备忘录
+function memoNeedLogin() {
+  pendingMemo = true
+  mode.value = 'login'
+}
+
 // 登录/注册成功 → 短暂展示爱心雨后跳转首页
 let homeTimer = null
 function goHome() {
   currentUser.value = readStoredUser()
   clearTimeout(homeTimer)
   homeTimer = setTimeout(() => {
-    // 若是从「个人中心」被引导来登录的，登录后直接回编辑页
+    // 若是从「个人中心」/「备忘录」被引导来登录的，登录后直接回目标页
     if (pendingProfile && currentUser.value && currentUser.value.token) {
       pendingProfile = false
       mode.value = 'profile'
+    } else if (pendingMemo && currentUser.value && currentUser.value.token) {
+      pendingMemo = false
+      mode.value = 'memo'
     } else {
       mode.value = 'home'
     }
@@ -190,10 +214,11 @@ function backToHome() {
   <transition name="swap" mode="out-in">
     <LoginCard v-if="mode === 'login'" key="login" @celebrate="onCelebrate" @switch="mode = 'register'" @loggedIn="goHome" />
     <RegisterCard v-else-if="mode === 'register'" key="register" @celebrate="onCelebrate" @switch="mode = 'login'" @loggedIn="goHome" />
-    <HomePage v-else-if="mode === 'home'" key="home" :user="currentUser" :flash-msg="homeFlash" @logout="logout" @goAdmin="goAdmin" @goProfile="goProfile" />
+    <HomePage v-else-if="mode === 'home'" key="home" :user="currentUser" :flash-msg="homeFlash" @logout="logout" @goAdmin="goAdmin" @goProfile="goProfile" @goMemo="goMemo" />
     <AdminLogin v-else-if="mode === 'admin-login'" key="admin-login" @loggedIn="goAdminHome" @back="backToHome" />
     <AdminDashboard v-else-if="mode === 'admin'" key="admin" :admin="currentAdmin" @logout="adminLogout" @back="backToHome" />
     <PersonalCenter v-else-if="mode === 'profile'" key="profile" :user="currentUser" @back="backToHome" @logout="logout" @tokenRefreshed="refreshUserToken" @needLogin="profileNeedLogin" @saved="profileSaved" />
+    <MemoBoard v-else-if="mode === 'memo'" key="memo" :user="currentUser" @back="backToHome" @needLogin="memoNeedLogin" />
   </transition>
   <HeartLayer ref="heartLayer" />
 </template>

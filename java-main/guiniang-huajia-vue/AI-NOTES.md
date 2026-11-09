@@ -4,12 +4,12 @@
 
 ## 项目概况
 - Vite 6 + Vue 3（仅 vue 一个运行时依赖，安装很快），`<script setup>` 组合式 API
-- dev server: `http://127.0.0.1:5173`（见 vite.config.js）
+- dev server: `http://192.168.68.22:5173`（见 vite.config.js）
 - 页面组件在 `src/components/`；**后台统一请求层在 `src/utils/adminApi.js`**
 - 当前版本路径：`C:\Users\user\IdeaProjects\java\java-main\guiniang-huajia-vue`
 
 ## 与后端的对接
-- **直连**（无代理）：`http://127.0.0.1:8081`
+- **直连**（无代理）：`http://192.168.68.22:8081`
 - 后台已配 CORS；**必须先启动后端**（`../springBootTest/start-backend.bat`）
 - 前台接口 `/api/user/login`、`/api/user/register`、`/api/home`、`/api/search` 公开；`/api/profile/**` 带用户 JWT
 - **后台所有接口都带管理员 JWT**，由 `src/utils/adminApi.js` 统一注入
@@ -55,7 +55,7 @@
 
 ## 验证
 ```bash
-curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5173/   # 应为 200
+curl -s -o /dev/null -w "%{http_code}" http://192.168.68.22:5173/   # 应为 200
 ```
 2026-11-04：`vite build` 通过（35 个模块）。
 
@@ -70,3 +70,11 @@ curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5173/   # 应为 200
 - 卡片渲染统一用 `visibleCards` computed，标题用 `resultHeading` computed；**不要再新增第三套 v-for 卡片循环**，否则筛选/分页状态会打架。
 - 详情与收藏是两套独立弹层（`showDetail` / `showFavorites`），从珍藏列表点条目会先关列表再开详情。
 - 全部改动只在 `HomePage.vue` 内，未触碰 `App.vue` 的状态机。
+
+
+## 备忘录模块（2026-11-09 新增）
+- `src/components/MemoBoard.vue`：便签板页面（新增/编辑/删除、完成勾选、置顶、配色、筛选、搜索）。
+- 路由：`App.vue` 的 mode 增加 `memo`；未登录点「备忘录」会先去登录，登录后自动回到备忘录（pendingMemo，逻辑同个人中心）。
+- 入口：`HomePage.vue` 顶部导航 `.nav-memo` 与左侧 rail `.rail-memo`，emit `goMemo`。
+- 接口：`GET/POST /api/profile/memos`、`PUT/DELETE /api/profile/memos/{id}`，带 `Authorization: Bearer <guiniang_user.token>`；401 时 emit `needLogin`。
+- 注意：后端必须重启（新 jar）才有这些接口；`start-backend.bat` 会先杀掉 8081 旧进程再重新打包。

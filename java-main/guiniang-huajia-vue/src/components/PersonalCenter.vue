@@ -9,7 +9,7 @@ const props = defineProps({
 // saved：保存资料成功后抛给父组件，由 App.vue 同步登录态并跳回首页
 const emit = defineEmits(['back', 'logout', 'tokenRefreshed', 'needLogin', 'saved'])
 
-const API_BASE = 'http://127.0.0.1:8081'
+const API_BASE = 'http://192.168.68.22:8081'
 
 const token = computed(() => (props.user && props.user.token) || '')
 

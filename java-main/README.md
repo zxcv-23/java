@@ -4,10 +4,10 @@
 
 | 子项目 | 说明 | 地址 |
 |--------|------|------|
-| `springBootTest` | Spring Boot 3.4 后端（Java 21 + MyBatis-Plus + MySQL） | http://localhost:8081 |
-| `guiniang-huajia-vue` | Vue 3 + Vite 前端 | http://127.0.0.1:5173 |
+| `springBootTest` | Spring Boot 3.4 后端（Java 21 + MyBatis-Plus + MySQL） | http://192.168.68.22:8081 |
+| `guiniang-huajia-vue` | Vue 3 + Vite 前端 | http://192.168.68.22:5173 |
 
-前端通过 `fetch('http://127.0.0.1:8081/api/user/...')` 直连后端（后端已配置 CORS）。
+前端通过 `fetch('http://192.168.68.22:8081/api/user/...')` 直连后端（后端已配置 CORS）。
 
 ## 快速开始
 

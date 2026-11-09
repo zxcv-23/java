@@ -10,10 +10,10 @@ const props = defineProps({
   // 由 App.vue 传入的一次性提示（例如「资料已保存」），显示后即失效
   flashMsg: { type: String, default: '' }
 })
-const emit = defineEmits(['logout', 'goAdmin', 'goProfile'])
+const emit = defineEmits(['logout', 'goAdmin', 'goProfile', 'goMemo'])
 
 // ---------- 接口地址 ----------
-const API_BASE = 'http://127.0.0.1:8081'
+const API_BASE = 'http://192.168.68.22:8081'
 const SEARCH_API = API_BASE + '/api/search'
 const HOME_API = API_BASE + '/api/home'
 const ITEMS_API = API_BASE + '/api/items'
@@ -24,7 +24,7 @@ const FAV_API = API_BASE + '/api/profile/favorites'
 // 后端在线时读 /api/partner/site 覆盖，后端未起则用兜底地址，入口始终可点。
 const partnerSite = ref({
   name: '姻缘阁 · 寻缘',
-  url: 'http://127.0.0.1:8081/dating.html',
+  url: 'http://192.168.68.22:8081/dating.html',
   enabled: true
 })
 
@@ -110,6 +110,11 @@ function goAdmin() {
 // 进入个人中心（点击导航栏「个人中心」）
 function goProfile() {
   emit('goProfile')
+}
+
+// 进入备忘录（点击导航栏「备忘录」）；需登录，由 App.vue 判断并引导
+function goMemo() {
+  emit('goMemo')
 }
 
 // ---------- 首页数据（展示功能） ----------
@@ -478,6 +483,11 @@ function openMyGames() {
         <span class="partner-ico">↗</span> {{ partnerSite.name }}
       </button>
 
+      <!-- 备忘录入口：需登录，未登录时由 App.vue 引导去登录页 -->
+      <button class="nav-memo" type="button" @click="goMemo" title="打开我的备忘录">
+        <span class="memo-ico">📝</span> 备忘录
+      </button>
+
       <button class="nav-profile" type="button" @click="goProfile" title="进入个人中心">
         <span class="profile-ico">💞</span> 个人中心
       </button>
@@ -515,6 +525,10 @@ function openMyGames() {
       <button class="rail-item rail-games" type="button" @click="openMyGames" title="打开我的游戏">
         <span class="ri-ico">🎐</span>
         <span class="ri-txt">我的游戏</span>
+      </button>
+      <button class="rail-item rail-memo" type="button" @click="goMemo" title="打开备忘录">
+        <span class="ri-ico">📝</span>
+        <span class="ri-txt">备忘录</span>
       </button>
     </aside>
 
@@ -770,6 +784,8 @@ function openMyGames() {
 }
 .rail-games .ri-ico{ filter:drop-shadow(0 2px 6px rgba(244,213,139,.6)); }
 .rail-games:hover{ color:var(--gold); background:rgba(244,213,139,.14); }
+.rail-memo{ border-top:1px dashed rgba(244,213,139,.22); }
+.rail-memo:hover{ color:#D9BEFF; background:rgba(155,107,214,.16); }
 
 .nav-user{ display:flex; align-items:center; gap:10px; }
 
@@ -790,6 +806,18 @@ function openMyGames() {
   animation:shimmer 5s linear infinite; opacity:0; transition:opacity .25s;
 }
 .nav-admin:hover::after{ opacity:.3; }
+
+/* ---------- 备忘录入口按钮（紫金描边，与个人中心区分） ---------- */
+.nav-memo{
+  position:relative; display:flex; align-items:center; gap:6px; overflow:hidden;
+  border:1px solid rgba(244,213,139,.8); cursor:pointer;
+  color:#fff; font-size:13px; letter-spacing:1px; font-family:inherit;
+  padding:8px 16px; border-radius:999px; transition:.22s var(--ease-out); white-space:nowrap;
+  background:linear-gradient(180deg, rgba(155,107,214,.42), rgba(106,58,160,.42));
+  box-shadow:0 4px 14px rgba(106,58,160,.34), inset 0 1px 0 rgba(255,255,255,.18);
+}
+.nav-memo:hover{ background:linear-gradient(180deg,#9B6BD6,#6A3AA0); box-shadow:0 6px 20px rgba(106,58,160,.6); }
+.nav-memo .memo-ico{ font-size:14px; }
 
 /* ---------- 个人中心入口按钮（与后台管理相邻，改用主站粉金描边区分） ---------- */
 .nav-profile{

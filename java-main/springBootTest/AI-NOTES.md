@@ -82,11 +82,11 @@
 
 ## 验证
 ```bash
-curl http://127.0.0.1:8081/user/test
-curl -i http://127.0.0.1:8081/api/manage/items          # 应为 401（未登录）
-curl -X POST http://127.0.0.1:8081/api/admin/login -H "Content-Type: application/json" \
+curl http://192.168.68.22:8081/user/test
+curl -i http://192.168.68.22:8081/api/manage/items          # 应为 401（未登录）
+curl -X POST http://192.168.68.22:8081/api/admin/login -H "Content-Type: application/json" \
      -d '{"account":"admin","password":"admin123"}'      # 取 data.token
-curl -H "Authorization: Bearer <token>" "http://127.0.0.1:8081/api/manage/items?page=1&size=10"
+curl -H "Authorization: Bearer <token>" "http://192.168.68.22:8081/api/manage/items?page=1&size=10"
 ```
 2026-11-04 已跑过 17 项端到端用例（登录/401/作用域隔离/分页/筛选/统计/增删改/回收站/恢复/改密校验/登出失效），全部通过。
 
@@ -213,7 +213,7 @@ item 18 的浏览量已全部清理，库内回到 `18 / 13 / 4`。
   `mysql -D dd < schema.sql` / `data.sql` 幂等初始化；并改成**每次都重新打包**，避免跑旧 jar。
 - `sql/init.sql` 改为只 `CREATE DATABASE IF NOT EXISTS dd; USE dd;`（不再 DROP TABLE）；
   `sql/fix_user_table.sql` / `fix_admin_table.sql` 的库名同步改 `dd`。
-- 判定是否修好：`GET http://127.0.0.1:8081/user/test` 能通，
+- 判定是否修好：`GET http://192.168.68.22:8081/user/test` 能通，
   且 `SELECT COUNT(*) FROM dd.user;` 在注册后会增加。
 
 ### 注意
@@ -230,7 +230,7 @@ item 18 的浏览量已全部清理，库内回到 `18 / 13 / 4`。
 - 排查期间 `dd` 库曾被外部操作 `DROP DATABASE dd`（binlog 可查），
   已用 `sql/guiniang.sql` 原样恢复：admin=1 / banner=4 / category=13 / item=18 / user=0，
   启动时 `SchemaMigration` 还补建了 `favorite` 表。**没有丢任何业务数据。**
-- 复验方式：`GET http://127.0.0.1:8081/user/test` 能通；注册一个账号后
+- 复验方式：`GET http://192.168.68.22:8081/user/test` 能通；注册一个账号后
   `SELECT COUNT(*) FROM dd.user;` 应 +1（记得在 Navicat 里切到「数据」页看，设计页只有字段定义）。
 
 ## 相亲阁跳转页（2026-11-06 新增）
@@ -270,3 +270,12 @@ item 18 的浏览量已全部清理，库内回到 `18 / 13 / 4`。
   `partner.site.url` 改成那个完整网址即可，一行搞定；写相对路径则留在本服务内。
   目标协议只允许 `/`（不含 `//`）与 `http(s)://`，避免开放重定向。
 - Google 外链在国内网络通常不可直接访问，需要的话把 `partner.site.google-url` 换成任意可访问的搜索站。
+
+
+## 备忘录模块（2026-11-09 新增）
+- 表 `memo`：`src/main/resources/schema.sql` 里 `CREATE TABLE IF NOT EXISTS`，启动自动建表；也可手动执行 `sql/create_memo_table.sql`（幂等）。
+- 字段：id / user_id / title / content / done / pinned / color(violet|pink|gold|mint) / create_time / update_time；**物理删除**，实体不含 deleted 字段（避免全局 logic-delete-field 生效）。
+- 接口挂在 `/api/profile/memos`，直接复用 JwtInterceptor（`/api/profile/**`），userId 由 token 解析注入，前端不传：
+  - GET 列表 / POST 新增 / PUT /{id} 部分更新 / DELETE /{id}
+- 分层：entity/Memo、mapper/MemoMapper、dto/MemoRequest、service/MemoService(+impl)、controller/MemoController。所有查询/修改/删除都带 `eq(user_id)`，越权返回 400「这条备忘不存在，或不属于你」。
+- 联调：临时实例 8082 跑过 12 项用例（401 拦截、CRUD、部分更新、数据隔离），全部通过；测试数据已清理。

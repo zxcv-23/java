@@ -2,7 +2,7 @@
 // - 自动注入 Authorization: Bearer <后台 JWT>
 // - 统一解析后端 Result<T>，失败抛带可读 message 的 Error
 // - 401 时清除本地管理员会话并广播事件，App.vue 据此退回后台登录页
-const API_BASE = 'http://127.0.0.1:8081'
+const API_BASE = 'http://192.168.68.22:8081'
 const ADMIN_KEY = 'guiniang_admin'
 
 export const ADMIN_UNAUTHORIZED_EVENT = 'admin:unauthorized'

@@ -57,7 +57,7 @@ async function onSubmit() {
   loading.value = true
   try {
     // 调用后端注册接口（仅用户名 + 密码，不收集邮箱、手机号）
-    const res = await fetch('http://127.0.0.1:8081/api/user/register', {
+    const res = await fetch('http://192.168.68.22:8081/api/user/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: u, password: pw })
