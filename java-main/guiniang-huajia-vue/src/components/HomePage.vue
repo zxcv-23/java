@@ -13,7 +13,7 @@ const props = defineProps({
 const emit = defineEmits(['logout', 'goAdmin', 'goProfile', 'goMemo'])
 
 // ---------- 接口地址 ----------
-const API_BASE = 'http://192.168.68.22:8081'
+const API_BASE = 'http://192.168.119.42:8081'
 const SEARCH_API = API_BASE + '/api/search'
 const HOME_API = API_BASE + '/api/home'
 const ITEMS_API = API_BASE + '/api/items'
@@ -24,7 +24,7 @@ const FAV_API = API_BASE + '/api/profile/favorites'
 // 后端在线时读 /api/partner/site 覆盖，后端未起则用兜底地址，入口始终可点。
 const partnerSite = ref({
   name: '姻缘阁 · 寻缘',
-  url: 'http://192.168.68.22:8081/dating.html',
+  url: 'http://192.168.119.42:8081/dating.html',
   enabled: true
 })
 

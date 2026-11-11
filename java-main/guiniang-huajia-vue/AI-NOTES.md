@@ -4,12 +4,12 @@
 
 ## 项目概况
 - Vite 6 + Vue 3（仅 vue 一个运行时依赖，安装很快），`<script setup>` 组合式 API
-- dev server: `http://192.168.68.22:5173`（见 vite.config.js）
+- dev server: `http://192.168.119.42:5173`（见 vite.config.js）
 - 页面组件在 `src/components/`；**后台统一请求层在 `src/utils/adminApi.js`**
 - 当前版本路径：`C:\Users\user\IdeaProjects\java\java-main\guiniang-huajia-vue`
 
 ## 与后端的对接
-- **直连**（无代理）：`http://192.168.68.22:8081`
+- **直连**（无代理）：`http://192.168.119.42:8081`
 - 后台已配 CORS；**必须先启动后端**（`../springBootTest/start-backend.bat`）
 - 前台接口 `/api/user/login`、`/api/user/register`、`/api/home`、`/api/search` 公开；`/api/profile/**` 带用户 JWT
 - **后台所有接口都带管理员 JWT**，由 `src/utils/adminApi.js` 统一注入
@@ -55,7 +55,7 @@
 
 ## 验证
 ```bash
-curl -s -o /dev/null -w "%{http_code}" http://192.168.68.22:5173/   # 应为 200
+curl -s -o /dev/null -w "%{http_code}" http://192.168.119.42:5173/   # 应为 200
 ```
 2026-11-04：`vite build` 通过（35 个模块）。
 
@@ -78,3 +78,64 @@ curl -s -o /dev/null -w "%{http_code}" http://192.168.68.22:5173/   # 应为 200
 - 入口：`HomePage.vue` 顶部导航 `.nav-memo` 与左侧 rail `.rail-memo`，emit `goMemo`。
 - 接口：`GET/POST /api/profile/memos`、`PUT/DELETE /api/profile/memos/{id}`，带 `Authorization: Bearer <guiniang_user.token>`；401 时 emit `needLogin`。
 - 注意：后端必须重启（新 jar）才有这些接口；`start-backend.bat` 会先杀掉 8081 旧进程再重新打包。
+
+
+## 花间小游戏（2026-11 全量重做，8 款全开）
+
+### 目录结构
+```
+src/games/            ← 游戏全部独立在此，与 components 解耦
+  theme.css           ← 共享视觉层（.gx-* 工具类 + --gx-* 变量），main.js 已全局引入
+  MatchGame.vue       落樱消消乐   6×6 三消
+  DressGame.vue       云裳换装记   SVG 仕女换装 + 视差
+  MakeupGame.vue      胭脂妆匣     铜镜妆面
+  PoetryGame.vue      飞花令       诗句对答
+  SeekGame.vue        宫墙寻芳     找物解谜
+  TeaGame.vue         茶寮物语     2048 式合成
+  RhythmGame.vue      弦歌行       四轨节奏（Web Audio 合成）
+  WeaveGame.vue       锦绣织坊     拼图 + 图鉴
+  WeavePattern.vue    └ 纹样子组件（团花/缠枝/云纹）
+src/components/MyGames.vue   ← 外壳：列表 / 详情 / 开玩 三段状态机
+```
+
+### MyGames.vue 状态机（无 vue-router）
+- `view: 'list' | 'detail' | 'play'`，`current` 存当前游戏对象。
+- `GAMES` 数组（8 项，字段 `id/name/mark/cat/tags/desc/color/rule`，`mark` 是卡片上的单字徽记，`rule` 给详情页做玩法说明）；`PLAY` 映射 `id → 组件`。**GAMES 里 8 项与 PLAY 里 8 个组件一一对应，全部可玩，没有 `playable` 开关也没有「敬请期待」占位**。
+- 播放态用 `<component :is="PLAY[current.id]" @exit="backToDetail" />`，**游戏组件统一 emit `exit`** 才能退回详情页。
+- 列表区：搜索框（名称/描述/标签）+ 品类标签页（全部/消除/换装/解谜/经营/休闲）+ 横向轮播 `SLIDES`。
+- 卡片用全局指令 `v-tilt`（main.js 注册）做 3D 倾斜；页面用 `<Teleport to="body">` 全屏覆盖，避免被首页布局挤压。
+- 背景是纯 CSS/SVG 合成：月轮、雾霭、极光、花枝、剪影、灯笼、落瓣、浮尘 —— 分层 `position:absolute`，不要再套图片。
+
+### theme.css 约定（改主题只动这里）
+- `--gx-*` 变量：底色/描金/宣纸/墨色/胭脂/黛青等；`.gx-game` 根容器、`.gx-head` 标题栏（含 `.gx-medallion` 圆形徽章）、`.gx-hud` 数据条、`.gx-stage` 舞台、`.gx-btn` 描金按钮、`.gx-chip` 小标签、`.gx-result` 结算层、`.gx-seal` 印章。
+- 动画：`gx-enter` / `gx-breathe` / `gx-shimmer` / `gx-pop`。
+- 游戏组件内**只写布局与专属动效**，配色优先用变量，保证 8 款观感一致。
+
+### 各游戏实现要点 / 坑
+- **MatchGame**：6×6、5 花材、20 步、目标 1200。棋盘用 CSS 3D 瓦片 + `tile-shine` 高光；三消判定后掉落要按列补位，别整体重排。
+- **DressGame**：整幅 SVG 仕女（`DRESS 5 / HAIR 3 / SHAWL 4(含无) / PIN 3`），鼠标 `rotateX/rotateY` 视差。衣柜存 `guiniang_looks`；**背景必须是深色渐变**（早期白底与主题冲突）。
+- **MakeupGame**：铜镜 SVG，`BROWS 4 / SHADOW 5 / BLUSH 3 / LIPS 4 / HUADIAN 5`。`viewBox="92 44 136 136"` 是多次调过的取景框，改发型/脸型务必同步检查会不会切掉发髻。定妆评分按「胭脂/花钿/眼影是否上妆」计数映射 `七分/八分/九分/十分`，**不要再按数组下标硬算**（旧版会得到 undefined）。
+- **PoetryGame**：4 令字各 12 句，对手「社长」从剩余诗句里随机接；3 条命 + 每回合 30 秒；诗句区是滚动长卷。
+- **SeekGame**：宫墙夜景 SVG（砖缝、屋檐、暗角），5 个热点坐标在**画面上半部**；「点灯」给一次提示；命中出涟漪。
+- **TeaGame**：4×4 合成，10 级 `茶芽 → … → 贡茶`。**`WIN_LEVEL = 10`**（等于数组长度，早期写成 9 导致永远不判胜）。瓦片必须放在 `.tea-tiles` 网格里，**不要用绝对定位 + left/top 百分比**（会错位）。支持 WASD / 方向键 / 触屏 / 屏幕方向键。
+- **RhythmGame**：四轨（宫商角徵，键位 D F J K），`requestAnimationFrame` 落珠 + Web Audio 现场合成拨弦音（不加载音频文件）；判定 perfect/good/miss 与连击。舞台 `.gr-stage::before` 提供呼吸光晕，琴弦要够亮。
+- **WeaveGame / WeavePattern**：3×3 / 4×4 交换式拼图，三套纹样；`WeavePattern` 里花朵坐标**在 `<script setup>` 里预计算成数组**，模板内不要写 `Math.random()`/函数调用（SSR 与重渲染都会不一致）。
+
+### 存档 key（全部 localStorage，纯前端，不走后端）
+| key | 归属 | 内容 |
+|-----|------|------|
+| `guiniang_looks` | 云裳换装记 | 保存的衣柜造型列表 |
+| `guiniang_tea_best` | 茶寮物语 | 历史最高茶级 |
+| `guiniang_rhythm_best` | 弦歌行 | 历史最高连击 |
+| `guiniang_weave_atlas` | 锦绣织坊 | 已收录纹样图鉴 |
+
+### 验证方式（本环境没有浏览器自动化 skill 时的做法）
+1. SSR 冒烟：`vite.createServer({ root: '<项目绝对路径>' })` + `vue/server-renderer` 的 `renderToString` 逐个渲染 8 个组件，检查 html 长度非空。**`root` 必须给绝对路径**，给 `process.cwd()` 会全部报 "Failed to load url /src/games/X.vue"。
+2. 真实交互：用 Chrome `--headless --remote-debugging-port` + CDP WebSocket 注入 Runtime.evaluate 点按钮、读状态（点卡片数、选中数、moves、已找到数等），比截图更可靠。
+3. 构建：`node node_modules/vite/bin/vite.js build <项目目录>`（见上文 coreutils 缺失说明）。
+
+### 新增一款游戏的步骤
+1. 在 `src/games/` 建 `XxxGame.vue`，根节点套 `.gx-game`，顶部用 `.gx-head`，结束时 `emit('exit')`。
+2. 在 `MyGames.vue` 的 `GAMES` 加一项（`id` 唯一、字段齐全），在 `PLAY` 里登记组件。
+3. 品类若为新类，需同步 `CATS` 标签数组。
+4. 有存档就沿用 `guiniang_` 前缀命名。

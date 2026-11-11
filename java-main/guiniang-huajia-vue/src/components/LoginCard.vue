@@ -50,7 +50,7 @@ async function onSubmit() {
   loading.value = true
   try {
     // 调用后端登录接口（凭夫君名讳 + 结契暗语登录）
-    const res = await fetch('http://192.168.68.22:8081/api/user/login', {
+    const res = await fetch('http://192.168.119.42:8081/api/user/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ account: u, password: pw })

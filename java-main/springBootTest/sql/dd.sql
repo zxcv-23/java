@@ -11,7 +11,7 @@
  Target Server Version : 80046 (8.0.46)
  File Encoding         : 65001
 
- Date: 06/11/2026 09:24:30
+ Date: 11/11/2026 16:52:06
 */
 
 SET NAMES utf8mb4;
@@ -115,7 +115,7 @@ CREATE TABLE `favorite`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_favorite_user_item`(`user_id` ASC, `item_id` ASC) USING BTREE,
   INDEX `idx_favorite_item`(`item_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户收藏表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户收藏表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of favorite
@@ -163,8 +163,32 @@ INSERT INTO `item` VALUES (13, 12, '往生花', '生于忘川彼岸，花叶永�
 INSERT INTO `item` VALUES (14, 12, '忘川渡', '一叶扁舟，渡尽前尘旧事。', '🌊', '往生', '忘川河横亘阴阳，摆渡人载亡魂过河，饮下孟汤，前缘尽忘，唯余此岸花红。', '忘川', 1, '2026-10-30 09:38:08', '2026-10-30 09:38:08', 0, 0);
 INSERT INTO `item` VALUES (15, 13, '碑上姻缘', '青石为碑，刻一双不灭之名。', '🪦', '往生', '碑上姻缘者，为早逝鸳鸯立双碑于一处，纵身死而名相守，世世可寻。', '往生簿', 1, '2026-10-30 09:38:08', '2026-10-30 09:38:08', 0, 0);
 INSERT INTO `item` VALUES (16, 1, '鬼娘花嫁总录', '集天下鬼娘花嫁之姻缘于一册。', '💞', '姻缘簿', '鬼娘花嫁总录汇录诸般冥婚典故与良缘，供有缘夫君于此寻觅命定之契。', '月老', 1, '2026-10-30 09:38:08', '2026-10-30 09:38:08', 0, 0);
-INSERT INTO `item` VALUES (17, 3, '红妆合集', '红妆阁珍藏，件件皆是心头好。', '🌹', '红妆', '红妆合集收尽胭脂钗环、嫁衣镜奁，一览红妆阁之盛，待新人逐件拣选。', '红妆阁', 1, '2026-10-30 09:38:08', '2026-10-30 09:38:08', 0, 0);
-INSERT INTO `item` VALUES (18, 2, '花轿信使录', '信使奔走阴阳，递送相思。', '📜', '花轿', '花轿信使录记往来阴阳之传书与请柬，纵隔幽明，亦可互通款曲、再缔良约。', '花轿信使', 1, '2026-10-30 09:38:08', '2026-10-30 09:38:08', 0, 0);
+INSERT INTO `item` VALUES (17, 3, '红妆合集', '红妆阁珍藏，件件皆是心头好。', '🌹', '红妆', '红妆合集收尽胭脂钗环、嫁衣镜奁，一览红妆阁之盛，待新人逐件拣选。', '红妆阁', 1, '2026-10-30 09:38:08', '2026-11-11 16:25:17', 0, 1);
+INSERT INTO `item` VALUES (18, 2, '花轿信使录', '信使奔走阴阳，递送相思。', '📜', '花轿', '花轿信使录记往来阴阳之传书与请柬，纵隔幽明，亦可互通款曲、再缔良约。', '花轿信使', 1, '2026-10-30 09:38:08', '2026-11-11 16:12:27', 0, 1);
+
+-- ----------------------------
+-- Table structure for memo
+-- ----------------------------
+DROP TABLE IF EXISTS `memo`;
+CREATE TABLE `memo`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint NOT NULL COMMENT '所属用户ID（由 JWT 解析，前端不传）',
+  `title` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '标题',
+  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '正文',
+  `done` tinyint NOT NULL DEFAULT 0 COMMENT '是否完成：0-待办 1-已完成',
+  `pinned` tinyint NOT NULL DEFAULT 0 COMMENT '是否置顶：0-否 1-是',
+  `color` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'violet' COMMENT '便签配色：violet/pink/gold/mint',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_memo_user`(`user_id` ASC) USING BTREE,
+  INDEX `idx_memo_user_order`(`user_id` ASC, `pinned` ASC, `done` ASC, `update_time` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户备忘录（按登录用户隔离）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of memo
+-- ----------------------------
+INSERT INTO `memo` VALUES (2, 3, '少女心事', '我今天吃了一碗西红柿鸡蛋拌面，感觉不好吃', 0, 0, 'violet', '2026-11-11 16:24:27', '2026-11-11 16:24:27');
 
 -- ----------------------------
 -- Table structure for user
@@ -187,11 +211,12 @@ CREATE TABLE `user`  (
   `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除 1-已删除',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_username`(`username` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户表（鬼娘花嫁注册用户）' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户表（鬼娘花嫁注册用户）' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of user
 -- ----------------------------
 INSERT INTO `user` VALUES (2, 'ff', '$2a$10$ObPGCDJF3vk.GgXwzsSZX.BkJjgF6wwSf6fV7ljFQ73CoV3ay2uqq', 'ff', NULL, NULL, NULL, 0, NULL, 0, 1, '2026-11-06 09:21:54', '2026-11-06 09:21:54', 0);
+INSERT INTO `user` VALUES (3, 'fff', '$2a$10$i88SxblF7/5se1l5x0HBbOo3WVV6HgamUw2DoSwcc8K/wTRDlWDaO', 'fff', NULL, NULL, NULL, 0, NULL, 0, 1, '2026-11-11 16:11:21', '2026-11-11 16:11:21', 0);
 
 SET FOREIGN_KEY_CHECKS = 1;

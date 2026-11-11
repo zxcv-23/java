@@ -31,7 +31,7 @@ if not exist "node_modules" (
     echo [依赖] 安装完成。
 )
 
-echo [启动] 前端开发服务器: http://192.168.68.22:5173  (关闭本窗口或按 Ctrl+C 即停止)
+echo [启动] 前端开发服务器: http://192.168.119.42:5173  (关闭本窗口或按 Ctrl+C 即停止)
 call npm run dev
 echo [退出] 前端已停止。
 pause

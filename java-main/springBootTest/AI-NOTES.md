@@ -82,11 +82,11 @@
 
 ## 验证
 ```bash
-curl http://192.168.68.22:8081/user/test
-curl -i http://192.168.68.22:8081/api/manage/items          # 应为 401（未登录）
-curl -X POST http://192.168.68.22:8081/api/admin/login -H "Content-Type: application/json" \
+curl http://192.168.119.42:8081/user/test
+curl -i http://192.168.119.42:8081/api/manage/items          # 应为 401（未登录）
+curl -X POST http://192.168.119.42:8081/api/admin/login -H "Content-Type: application/json" \
      -d '{"account":"admin","password":"admin123"}'      # 取 data.token
-curl -H "Authorization: Bearer <token>" "http://192.168.68.22:8081/api/manage/items?page=1&size=10"
+curl -H "Authorization: Bearer <token>" "http://192.168.119.42:8081/api/manage/items?page=1&size=10"
 ```
 2026-11-04 已跑过 17 项端到端用例（登录/401/作用域隔离/分页/筛选/统计/增删改/回收站/恢复/改密校验/登出失效），全部通过。
 
@@ -213,7 +213,7 @@ item 18 的浏览量已全部清理，库内回到 `18 / 13 / 4`。
   `mysql -D dd < schema.sql` / `data.sql` 幂等初始化；并改成**每次都重新打包**，避免跑旧 jar。
 - `sql/init.sql` 改为只 `CREATE DATABASE IF NOT EXISTS dd; USE dd;`（不再 DROP TABLE）；
   `sql/fix_user_table.sql` / `fix_admin_table.sql` 的库名同步改 `dd`。
-- 判定是否修好：`GET http://192.168.68.22:8081/user/test` 能通，
+- 判定是否修好：`GET http://192.168.119.42:8081/user/test` 能通，
   且 `SELECT COUNT(*) FROM dd.user;` 在注册后会增加。
 
 ### 注意
@@ -230,7 +230,7 @@ item 18 的浏览量已全部清理，库内回到 `18 / 13 / 4`。
 - 排查期间 `dd` 库曾被外部操作 `DROP DATABASE dd`（binlog 可查），
   已用 `sql/guiniang.sql` 原样恢复：admin=1 / banner=4 / category=13 / item=18 / user=0，
   启动时 `SchemaMigration` 还补建了 `favorite` 表。**没有丢任何业务数据。**
-- 复验方式：`GET http://192.168.68.22:8081/user/test` 能通；注册一个账号后
+- 复验方式：`GET http://192.168.119.42:8081/user/test` 能通；注册一个账号后
   `SELECT COUNT(*) FROM dd.user;` 应 +1（记得在 Navicat 里切到「数据」页看，设计页只有字段定义）。
 
 ## 相亲阁跳转页（2026-11-06 新增）

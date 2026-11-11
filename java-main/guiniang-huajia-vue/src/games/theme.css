@@ -1,0 +1,194 @@
+/* ============================================================
+   花间小游戏 · 共享视觉层
+   只放 .gx-* 工具类与设计变量，游戏各自的细节样式留在组件内。
+   主题：夜色花间 · 描金漆器 · 玻璃浮光
+   ============================================================ */
+:root{
+  --gx-serif:"Noto Serif SC","Source Han Serif SC","Songti SC","STSong","SimSun",serif;
+  --gx-sans:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Heiti SC",sans-serif;
+
+  --gx-night:#170C26;
+  --gx-night-2:#241339;
+  --gx-ink:#3B2B45;
+  --gx-paper:#FFFAFD;
+
+  --gx-pink:#F2719F;
+  --gx-pink-deep:#D94F83;
+  --gx-pink-soft:#FFC2DC;
+  --gx-gold:#E9C173;
+  --gx-gold-hi:#FFEFC6;
+  --gx-gold-deep:#B98B3F;
+  --gx-jade:#8FD6C0;
+  --gx-violet:#8A5FD0;
+
+  --gx-line:rgba(233,193,115,.42);
+  --gx-glass:rgba(255,255,255,.10);
+  --gx-glass-2:rgba(255,255,255,.18);
+  --gx-shadow:0 18px 46px rgba(10,4,24,.55);
+}
+
+/* ---------- 游戏通用骨架 ---------- */
+.gx-game{
+  display:flex; flex-direction:column; gap:14px;
+  color:#FFF4FA; font-family:var(--gx-sans);
+  padding:22px 24px 20px;
+  animation:gx-enter .34s cubic-bezier(.22,1,.36,1);
+}
+@keyframes gx-enter{ from{ opacity:0; transform:translateY(10px) scale(.99) } to{ opacity:1; transform:none } }
+
+.gx-head{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.gx-medallion{
+  width:54px; height:54px; flex:none; border-radius:17px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--gx-serif); font-size:26px; color:#fff;
+  background:var(--mc,linear-gradient(135deg,#FF9EC4,#E4548D));
+  box-shadow:0 8px 22px rgba(226,80,140,.38), inset 0 1px 0 rgba(255,255,255,.45);
+  position:relative;
+}
+.gx-medallion::after{
+  content:""; position:absolute; inset:3px; border-radius:13px;
+  border:1px solid rgba(255,255,255,.35); pointer-events:none;
+}
+.gx-headtxt{ flex:1; min-width:150px; }
+.gx-kicker{
+  margin:0 0 3px; font-size:10px; letter-spacing:2.5px;
+  color:rgba(255,232,244,.62); text-transform:uppercase;
+}
+.gx-title{
+  margin:0; font-family:var(--gx-serif); font-size:21px; letter-spacing:2px;
+  color:#FFF7EF; text-shadow:0 2px 14px rgba(255,150,200,.35);
+}
+.gx-headright{ display:flex; align-items:center; gap:8px; margin-right:28px; }
+
+/* ---------- HUD ---------- */
+.gx-hud{
+  display:flex; align-items:center; gap:8px 18px; flex-wrap:wrap;
+  padding:10px 16px; border-radius:14px;
+  background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.05));
+  border:1px solid rgba(233,193,115,.28);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.20), 0 6px 18px rgba(10,4,24,.25);
+  backdrop-filter:blur(10px);
+}
+.gx-stat{ font-size:11px; letter-spacing:1.5px; color:rgba(255,236,246,.66); display:flex; align-items:baseline; gap:6px; }
+.gx-stat b{
+  font-family:var(--gx-serif); font-size:19px; letter-spacing:0;
+  color:#FFE9B8; text-shadow:0 0 14px rgba(255,210,120,.45);
+}
+.gx-stat.jade b{ color:#B6F0DA; text-shadow:0 0 14px rgba(120,230,190,.4); }
+.gx-spacer{ flex:1; }
+
+/* ---------- 舞台（描金漆器） ---------- */
+.gx-stage{
+  position:relative; border-radius:20px; overflow:hidden;
+  background:
+    radial-gradient(120% 90% at 50% -10%, rgba(255,196,224,.16), transparent 60%),
+    radial-gradient(90% 80% at 50% 110%, rgba(138,95,208,.22), transparent 62%),
+    linear-gradient(165deg,#2C1A44,#1E1130 55%,#150B23);
+  border:1px solid rgba(233,193,115,.34);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.13),
+    inset 0 0 60px rgba(80,30,110,.45),
+    0 14px 34px rgba(8,3,20,.5);
+}
+.gx-stage::before{
+  content:""; position:absolute; inset:8px; border-radius:14px; pointer-events:none; z-index:4;
+  border:1px solid rgba(233,193,115,.20);
+}
+.gx-stage::after{
+  content:""; position:absolute; inset:0; pointer-events:none; z-index:5; opacity:.55;
+  background-image:radial-gradient(rgba(255,255,255,.10) .5px, transparent .6px);
+  background-size:3px 3px; mix-blend-mode:overlay;
+}
+.gx-stage-in{ position:relative; z-index:2; }
+
+/* ---------- 按钮 ---------- */
+.gx-btn{
+  border:0; cursor:pointer; border-radius:24px; padding:10px 20px;
+  font-size:13px; letter-spacing:2px; font-family:var(--gx-sans);
+  transition:transform .2s cubic-bezier(.22,1,.36,1), filter .2s, box-shadow .2s, background .2s;
+  position:relative; white-space:nowrap;
+}
+.gx-btn.primary{
+  color:#FFF8FB; background:linear-gradient(120deg,#FF8FB4,#E4548D 60%,#C93F78);
+  box-shadow:0 6px 18px rgba(226,80,140,.42), inset 0 1px 0 rgba(255,255,255,.35);
+}
+.gx-btn.primary:hover{ filter:brightness(1.07); transform:translateY(-1px); }
+.gx-btn.gold{
+  color:#5A3A18; background:linear-gradient(120deg,#FFEFC6,#E9C173 58%,#D2A45A);
+  box-shadow:0 6px 18px rgba(200,150,60,.35), inset 0 1px 0 rgba(255,255,255,.6);
+}
+.gx-btn.gold:hover{ filter:brightness(1.05); transform:translateY(-1px); }
+.gx-btn.ghost{
+  color:#F3DFF0; background:rgba(255,255,255,.10);
+  border:1px solid rgba(255,225,245,.30);
+}
+.gx-btn.ghost:hover{ background:rgba(255,255,255,.20); }
+.gx-btn.mini{ padding:6px 13px; font-size:11px; letter-spacing:1px; }
+.gx-btn:disabled{ opacity:.45; cursor:default; transform:none !important; filter:none !important; }
+
+/* ---------- 选项芯片 ---------- */
+.gx-chip{
+  border:1px solid rgba(233,193,115,.30); background:rgba(255,255,255,.07);
+  color:#EBD9EC; border-radius:18px; padding:6px 13px; font-size:11.5px;
+  letter-spacing:1px; cursor:pointer; font-family:var(--gx-sans);
+  transition:.2s cubic-bezier(.22,1,.36,1);
+}
+.gx-chip:hover{ border-color:rgba(255,180,212,.6); color:#FFD9E8; transform:translateY(-1px); }
+.gx-chip.on{
+  background:linear-gradient(120deg,#FF8FB4,#E4548D); color:#fff; border-color:transparent;
+  box-shadow:0 5px 14px rgba(226,80,140,.38), inset 0 1px 0 rgba(255,255,255,.3);
+}
+
+/* ---------- 分隔 / 提示 ---------- */
+.gx-divider{
+  display:flex; align-items:center; gap:10px; margin:2px 0;
+  color:rgba(255,232,244,.42); font-size:10px; letter-spacing:3px;
+}
+.gx-divider::before,.gx-divider::after{
+  content:""; height:1px; flex:1;
+  background:linear-gradient(90deg,transparent,rgba(233,193,115,.45),transparent);
+}
+.gx-hint{ font-size:11.5px; letter-spacing:1px; color:rgba(255,232,244,.60); line-height:1.7; margin:0; }
+.gx-toast{
+  min-height:20px; text-align:center; font-size:12px; letter-spacing:1.5px;
+  color:#FFD9E8; transition:opacity .3s;
+}
+.gx-foot{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; }
+
+/* ---------- 结果卡 ---------- */
+.gx-result{
+  position:absolute; inset:0; z-index:9; display:flex; align-items:center; justify-content:center;
+  background:rgba(16,7,28,.72); backdrop-filter:blur(8px);
+  animation:gx-enter .3s ease;
+}
+.gx-result-card{
+  width:min(360px,88%); padding:26px 24px 22px; text-align:center; border-radius:20px;
+  background:linear-gradient(165deg,rgba(60,34,84,.96),rgba(34,18,52,.98));
+  border:1px solid rgba(233,193,115,.45);
+  box-shadow:0 24px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.16);
+}
+.gx-result-card h3{
+  margin:0 0 6px; font-family:var(--gx-serif); font-size:24px; letter-spacing:3px; color:#FFE9B8;
+}
+.gx-result-card p{ margin:0 0 16px; font-size:12.5px; line-height:1.9; color:rgba(255,238,248,.78); }
+.gx-seal{
+  width:64px; height:64px; margin:0 auto 12px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--gx-serif); font-size:24px; color:#7A1E30;
+  background:radial-gradient(circle at 34% 30%,#FFE3E9,#F4A9B8 60%,#DC8298);
+  box-shadow:0 0 0 3px rgba(255,255,255,.14), 0 0 30px rgba(255,140,170,.5);
+}
+
+/* ---------- 通用动效 ---------- */
+@keyframes gx-breathe{ 0%,100%{ opacity:.55; transform:scale(1) } 50%{ opacity:.95; transform:scale(1.06) } }
+@keyframes gx-drift{ 0%{ transform:translate3d(0,0,0) } 50%{ transform:translate3d(10px,-8px,0) } 100%{ transform:translate3d(0,0,0) } }
+@keyframes gx-shimmer{ 0%{ background-position:-160% 0 } 100%{ background-position:260% 0 } }
+@keyframes gx-pop{ 0%{ transform:scale(.6); opacity:0 } 60%{ transform:scale(1.08); opacity:1 } 100%{ transform:scale(1) } }
+
+@media (prefers-reduced-motion: reduce){
+  .gx-game, .gx-stage, .gx-result{ animation:none !important; }
+}
+@media (max-width:640px){
+  .gx-game{ padding:16px 14px; gap:11px; }
+  .gx-title{ font-size:18px; }
+}

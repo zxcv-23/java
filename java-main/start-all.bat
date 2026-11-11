@@ -9,8 +9,8 @@ start "backend - 8081" cmd /k "%~dp0springBootTest\start-backend.bat"
 timeout /t 3 /nobreak >nul
 start "frontend - 5173" cmd /k "%~dp0guiniang-huajia-vue\start-frontend.bat"
 echo.
-echo 后端: http://192.168.68.22:8081
-echo 前端: http://192.168.68.22:5173
+echo 后端: http://192.168.119.42:8081
+echo 前端: http://192.168.119.42:5173
 echo.
 echo 已打开两个窗口, 关闭窗口或运行 stop-all.bat 即可停止。
 pause
