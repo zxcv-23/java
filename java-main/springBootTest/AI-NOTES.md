@@ -82,11 +82,11 @@
 
 ## 验证
 ```bash
-curl http://192.168.119.42:8081/user/test
-curl -i http://192.168.119.42:8081/api/manage/items          # 应为 401（未登录）
-curl -X POST http://192.168.119.42:8081/api/admin/login -H "Content-Type: application/json" \
+curl http://192.168.68.22:8081/user/test
+curl -i http://192.168.68.22:8081/api/manage/items          # 应为 401（未登录）
+curl -X POST http://192.168.68.22:8081/api/admin/login -H "Content-Type: application/json" \
      -d '{"account":"admin","password":"admin123"}'      # 取 data.token
-curl -H "Authorization: Bearer <token>" "http://192.168.119.42:8081/api/manage/items?page=1&size=10"
+curl -H "Authorization: Bearer <token>" "http://192.168.68.22:8081/api/manage/items?page=1&size=10"
 ```
 2026-11-04 已跑过 17 项端到端用例（登录/401/作用域隔离/分页/筛选/统计/增删改/回收站/恢复/改密校验/登出失效），全部通过。
 
@@ -213,7 +213,7 @@ item 18 的浏览量已全部清理，库内回到 `18 / 13 / 4`。
   `mysql -D dd < schema.sql` / `data.sql` 幂等初始化；并改成**每次都重新打包**，避免跑旧 jar。
 - `sql/init.sql` 改为只 `CREATE DATABASE IF NOT EXISTS dd; USE dd;`（不再 DROP TABLE）；
   `sql/fix_user_table.sql` / `fix_admin_table.sql` 的库名同步改 `dd`。
-- 判定是否修好：`GET http://192.168.119.42:8081/user/test` 能通，
+- 判定是否修好：`GET http://192.168.68.22:8081/user/test` 能通，
   且 `SELECT COUNT(*) FROM dd.user;` 在注册后会增加。
 
 ### 注意
@@ -230,7 +230,7 @@ item 18 的浏览量已全部清理，库内回到 `18 / 13 / 4`。
 - 排查期间 `dd` 库曾被外部操作 `DROP DATABASE dd`（binlog 可查），
   已用 `sql/guiniang.sql` 原样恢复：admin=1 / banner=4 / category=13 / item=18 / user=0，
   启动时 `SchemaMigration` 还补建了 `favorite` 表。**没有丢任何业务数据。**
-- 复验方式：`GET http://192.168.119.42:8081/user/test` 能通；注册一个账号后
+- 复验方式：`GET http://192.168.68.22:8081/user/test` 能通；注册一个账号后
   `SELECT COUNT(*) FROM dd.user;` 应 +1（记得在 Navicat 里切到「数据」页看，设计页只有字段定义）。
 
 ## 相亲阁跳转页（2026-11-06 新增）
@@ -279,3 +279,68 @@ item 18 的浏览量已全部清理，库内回到 `18 / 13 / 4`。
   - GET 列表 / POST 新增 / PUT /{id} 部分更新 / DELETE /{id}
 - 分层：entity/Memo、mapper/MemoMapper、dto/MemoRequest、service/MemoService(+impl)、controller/MemoController。所有查询/修改/删除都带 `eq(user_id)`，越权返回 400「这条备忘不存在，或不属于你」。
 - 联调：临时实例 8082 跑过 12 项用例（401 拦截、CRUD、部分更新、数据隔离），全部通过；测试数据已清理。
+
+## 姻缘阁 · 作品集 / 点赞 / 私信 / 联系方式（2026-11-12 新增）
+
+把原来的「搜索式相亲展示页」升级成**带个人主页的轻社区**：点嘉宾卡片进主页 → 看作品集（照片 + 视频 + BGM）
+→ 点赞 → 私信 → 交换联系方式。前端仍是 `static/dating.html` 单文件，风格延续 Google 式极简。
+
+### 表结构（`config/SchemaMigration.java#ensureDatingTables` 启动幂等建表）
+| 表 | 关键字段 | 说明 |
+| --- | --- | --- |
+| `dating_work` | user_id, title, content, cover, bgm_url, bgm_name, like_count, comment_count, view_count, visible, create_time | 作品主表 |
+| `dating_work_media` | work_id, media_type(image/video), url, sort_order | 一个作品多张图 + 1 个视频 |
+| `dating_like` | work_id, user_id, create_time，唯一索引 `uk_dating_like(work_id,user_id)` | 点赞，靠唯一索引做幂等 |
+| `dating_message` | from_user_id, to_user_id, content, is_read, create_time | 站内私信，**不建会话表** |
+| `dating_contact` | user_id（唯一）, wechat, qq, phone, other, visible, update_time | 联系方式 |
+
+- 实体都用普通 `LocalDateTime createTime` 手动赋值，**不要加 `@TableField(fill=...)`**：
+  DB 列有默认值，加了自动填充反而会触发 MetaObjectHandler 严格填充异常。
+- 计数列更新一律走 `setSql("like_count = GREATEST(COALESCE(like_count,0) + (delta), 0)")`，别在 Java 里 read-modify-write。
+
+### 拦截器分层（`config/WebConfig.java`）——这是本次最关键的设计
+```java
+optionalJwtInterceptor → /api/dating/**            // 永不 401，只识别身份
+jwtInterceptor        → /api/profile/**, /api/dating/me/**   // 严格 401
+adminJwtInterceptor   → /api/manage/**, /api/admin/**
+```
+- **注意拦截器顺序**：`/api/dating/me/**` 同时匹配 `/api/dating/**`，所以 optional 拦截器先跑（注入 `authUserId`），
+  严格拦截器随后再判定 401。Controller 里写操作从 `@RequestAttribute(JwtInterceptor.ATTR_USER_ID)` 取 userId，
+  读操作从 `@RequestAttribute(value = OptionalJwtInterceptor.ATTR_USER_ID, required = false)` 取，**两者字符串常量相同**。
+- 游客能浏览（feed / 主页 / 作品详情），只是 `liked=false`、`contactVisible=false`。
+
+### 接口清单（`controller/DatingController.java`）
+| 方法 | 路径 | 鉴权 | 说明 |
+| --- | --- | --- | --- |
+| GET | `/api/dating/candidates` | 公开 | 嘉宾列表 |
+| GET | `/api/dating/users/{id}` | 可选 | 嘉宾主页：资料 + `works[]` + `contactVisible`/`contact` + `mine` |
+| GET | `/api/dating/works?limit=` | 可选 | 公开作品流 |
+| GET | `/api/dating/works/{id}` | 可选 | 作品详情，`view_count + 1` |
+| GET | `/api/dating/messages/{peerId}` | 可选* | 对话记录（读取即置已读）；未登录返回 `code=401` 的 Result（HTTP 200） |
+| POST | `/api/dating/me/works` | 必须 | 发作品，**单人上限 60 条** |
+| DELETE | `/api/dating/me/works/{id}` | 必须 | 删自己的作品，级联 media + like |
+| POST | `/api/dating/me/likes/{workId}` | 必须 | 点赞开关，返回 `{liked, likeCount}` |
+| POST | `/api/dating/me/messages/{toUserId}` | 必须 | 发私信 |
+| GET | `/api/dating/me/conversations` | 必须 | 会话列表（最近 500 条内存归组，含未读数） |
+| GET | `/api/dating/me/unread` | 必须 | 未读总数（前端 60s 轮询） |
+| GET/PUT | `/api/dating/me/contact` | 必须 | 读/存自己的联系方式 |
+| POST | `/api/dating/me/upload/image` | 必须 | 作品图片，等比缩放长边 1600（不裁切） |
+| POST | `/api/dating/me/upload/video` | 必须 | 视频，≤120MB，**不转码** |
+
+### 关键业务规则
+- **联系方式可见性** `DatingService#canSeeContact`：本人 → true；游客 → false；`visible==1` → true；
+  其余情况只有 `hasMessaged(a,b)`（双方任一方发过消息）才 true。
+- **点赞幂等**：先 `insert`，捕获 `DuplicateKeyException` 视为取消赞；再原子 `adjustCount`。同一用户重复请求不会把计数打歪。
+- **媒体 URL 校验**：图片/视频必须以 `/uploads/` 开头且不含 `..`；BGM 允许 `http(s)://` 或 `/uploads/`。防外链注入。
+- **会话归组**：私信表不存会话 id，`conversations()` 取最近 500 条按 `peerId` 归组，取每组最后一条 + 未读数。量大再上会话表。
+- **上传体积**：`max-file-size=120MB` / `max-request-size=200MB`，视频不转码，直接落 `uploads/`。
+
+### 迁移 / 排错
+- 表不存在：看启动日志有没有 `SchemaMigration` 报错；手工建表语句可从 `SchemaMigration#ensureDatingTables` 里复制。
+- 401 但已登录：确认前端走的是 `/api/dating/me/**` 而非 `/api/dating/**`；再看 token 是否 `scope=user`。
+- 上传 413：检查 `spring.servlet.multipart.max-file-size`，Nginx 反代还要同步 `client_max_body_size`。
+
+### 验证记录（2026-11-12）
+16 项端到端用例全部通过：双账号注册登录 → 图片/视频上传 → 匿名发布返回 401 → 发作品（3 媒体 + 封面 + BGM）→
+点赞三连切换正确 → 联系方式私信前隐藏 / 私信后可见 / 游客不可见 → 会话列表未读 2 → 打开对话自动清零 →
+给自己发信 400「不能给自己发私信哦」→ 删他人作品 400「只能删除自己的作品」→ 浏览数 +1 → 公开作品流可见。

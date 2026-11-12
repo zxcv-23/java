@@ -8,29 +8,38 @@
   :root{
     --bg:#fff; --soft:#f8f9fa; --ink:#202124; --muted:#5f6368;
     --line:#e8eaed; --blue:#1a73e8; --rose:#e0455f; --rose-soft:#fff1f3;
+    --gold:#b58a3c; --gold-soft:#fff9ec;
     --shadow:0 1px 6px rgba(60,64,67,.10); --shadow-hi:0 8px 26px rgba(60,64,67,.16);
+    --shadow-lg:0 20px 60px rgba(0,0,0,.20);
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
   body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
   a{color:inherit;text-decoration:none}
   button{font-family:inherit;cursor:pointer}
+  input,textarea{font-family:inherit}
 
   /* ---------- 顶栏 ---------- */
   header{display:flex;align-items:center;justify-content:space-between;gap:16px;
-    padding:14px 28px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+    padding:14px 28px;border-bottom:1px solid var(--line);flex-wrap:wrap;
+    position:sticky;top:0;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);z-index:10}
   .brand{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:600;letter-spacing:.5px}
   .dots{display:inline-flex;gap:3px}
   .dots i{width:8px;height:8px;border-radius:50%;display:block}
   .nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .nav a,.nav button{border:1px solid var(--line);background:#fff;border-radius:999px;
-    padding:8px 15px;font-size:13px;color:var(--muted);transition:.18s}
+    padding:8px 15px;font-size:13px;color:var(--muted);transition:.18s;position:relative}
   .nav a:hover,.nav button:hover{border-color:#c8ccd2;color:var(--ink);box-shadow:var(--shadow)}
   .nav .picks-btn{border-color:#f3c9d1;color:var(--rose);background:var(--rose-soft)}
+  .nav .primary{border-color:var(--ink);background:var(--ink);color:#fff}
+  .nav .primary:hover{background:#000;color:#fff}
   .pick-count{font-weight:700}
+  .dot-badge{position:absolute;top:-5px;right:-4px;min-width:18px;height:18px;border-radius:999px;
+    background:var(--rose);color:#fff;font-size:11px;line-height:18px;text-align:center;padding:0 5px;display:none}
+  .dot-badge.show{display:block}
 
-  /* ---------- 搜索区（Google 式极简） ---------- */
-  .hero{max-width:820px;margin:0 auto;padding:64px 24px 0;text-align:center}
+  /* ---------- 搜索区 ---------- */
+  .hero{max-width:820px;margin:0 auto;padding:56px 24px 0;text-align:center}
   .hero h1{font-size:clamp(30px,5vw,46px);font-weight:600;letter-spacing:2px;margin:0 0 12px}
   .hero h1 em{font-style:normal;background:linear-gradient(90deg,#4285F4,#EA4335,#FBBC05,#34A853);
     -webkit-background-clip:text;background-clip:text;color:transparent}
@@ -67,36 +76,40 @@
 
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(238px,1fr));gap:16px}
   .card{border:1px solid var(--line);border-radius:18px;padding:22px 18px 18px;background:#fff;
-    text-align:center;transition:.2s;position:relative;overflow:hidden}
+    text-align:center;transition:.2s;position:relative;overflow:hidden;cursor:pointer}
   .card:hover{transform:translateY(-3px);box-shadow:var(--shadow-hi);border-color:#dfe1e5}
   .avatar{width:84px;height:84px;border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;
-    justify-content:center;font-size:32px;font-weight:600;color:#fff;overflow:hidden;cursor:pointer;
+    justify-content:center;font-size:32px;font-weight:600;color:#fff;overflow:hidden;
     position:relative;background:linear-gradient(135deg,#f6a5b6,#e0455f)}
   .avatar.male{background:linear-gradient(135deg,#8ab4f8,#1a73e8)}
   .avatar.unknown{background:linear-gradient(135deg,#c5cbd3,#80868b)}
   .avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-  .name{font-size:17px;font-weight:600;margin:0 0 6px;cursor:pointer}
-  .name:hover{color:var(--blue)}
+  .name{font-size:17px;font-weight:600;margin:0 0 6px}
+  .card:hover .name{color:var(--blue)}
   .meta{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin-bottom:12px}
   .badge{font-size:11px;padding:3px 9px;border-radius:999px;background:var(--soft);color:var(--muted);border:1px solid var(--line)}
   .badge.g1{background:#eef4ff;color:#1a73e8;border-color:#d8e6ff}
   .badge.g2{background:var(--rose-soft);color:var(--rose);border-color:#f6d3da}
   .bio{font-size:13px;color:var(--muted);line-height:1.7;min-height:44px;
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:0 0 16px}
-  .like{width:100%;border:1px solid #f3c9d1;background:var(--rose-soft);color:var(--rose);
+  .card-actions{display:flex;gap:8px}
+  .like{flex:1;border:1px solid #f3c9d1;background:var(--rose-soft);color:var(--rose);
     border-radius:999px;padding:9px 0;font-size:13px;font-weight:600;transition:.18s}
   .like:hover{background:#ffe3e9}
   .like.on{background:var(--rose);border-color:var(--rose);color:#fff}
+  .btn-ghost{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:999px;
+    padding:9px 14px;font-size:13px}
+  .btn-ghost:hover{background:var(--soft);color:var(--ink)}
   .empty{text-align:center;padding:64px 20px;color:var(--muted)}
   .empty .ico{font-size:44px;margin-bottom:14px}
   .empty h3{color:var(--ink);font-size:18px;margin:0 0 8px}
   .empty p{font-size:13px;line-height:1.8;margin:0 0 18px}
   .empty a{display:inline-block;background:var(--blue);color:#fff;border-radius:999px;padding:10px 20px;font-size:13px}
 
-  /* ---------- 心动抽屉 / 详情弹层 ---------- */
+  /* ---------- 遮罩 / 抽屉 ---------- */
   .mask{position:fixed;inset:0;background:rgba(32,33,36,.38);opacity:0;pointer-events:none;transition:.22s;z-index:20}
   .mask.show{opacity:1;pointer-events:auto}
-  .drawer{position:fixed;top:0;right:0;bottom:0;width:min(380px,92vw);background:#fff;z-index:21;
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:min(400px,94vw);background:#fff;z-index:21;
     transform:translateX(100%);transition:.25s;display:flex;flex-direction:column;box-shadow:-8px 0 30px rgba(0,0,0,.12)}
   .drawer.show{transform:translateX(0)}
   .drawer-head{display:flex;align-items:center;justify-content:space-between;padding:20px;border-bottom:1px solid var(--line)}
@@ -105,28 +118,196 @@
   .drawer-body{flex:1;overflow:auto;padding:14px 20px}
   .pick-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
   .pick-row .mini{width:38px;height:38px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
-    color:#fff;font-size:14px;background:linear-gradient(135deg,#f6a5b6,#e0455f)}
-  .pick-row .txt{flex:1;min-width:0}
+    color:#fff;font-size:14px;background:linear-gradient(135deg,#f6a5b6,#e0455f);overflow:hidden;position:relative;cursor:pointer}
+  .pick-row .mini img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .pick-row .txt{flex:1;min-width:0;cursor:pointer}
   .pick-row .txt b{display:block;font-size:14px}
   .pick-row .txt span{font-size:12px;color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .pick-row button{border:0;background:transparent;color:var(--muted);font-size:18px}
+  .pick-row .unread{background:var(--rose);color:#fff;font-size:11px;border-radius:999px;padding:1px 7px;flex:none}
+  .pick-row button.rm{border:0;background:transparent;color:var(--muted);font-size:18px}
+  .pick-row.blank{display:block;color:var(--muted);font-size:12px;text-align:center;border:0;padding:14px 0}
   .drawer-foot{padding:16px 20px;border-top:1px solid var(--line)}
   .drawer-foot button{width:100%;border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px;font-size:13px;color:var(--muted)}
   .drawer-foot button:hover{background:var(--soft)}
 
+  /* ---------- 嘉宾主页（全屏视图） ---------- */
+  .page{display:none;z-index:15;position:fixed;inset:0;background:#fff;overflow:auto}
+  .page.show{display:block}
+  .page-inner{max-width:1040px;margin:0 auto;padding:0 24px 80px}
+  .page-top{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;
+    gap:12px;padding:14px 0;background:rgba(255,255,255,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .back{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 16px;font-size:13px;color:var(--muted)}
+  .back:hover{background:var(--soft);color:var(--ink)}
+  .page-top .ops{display:flex;gap:8px}
+
+  .profile-head{display:flex;gap:22px;align-items:center;padding:32px 0 22px;flex-wrap:wrap}
+  .profile-head .big-avatar{width:104px;height:104px;border-radius:50%;flex:none;display:flex;
+    align-items:center;justify-content:center;font-size:38px;font-weight:600;color:#fff;
+    position:relative;overflow:hidden;background:linear-gradient(135deg,#f6a5b6,#e0455f)}
+  .profile-head .big-avatar.male{background:linear-gradient(135deg,#8ab4f8,#1a73e8)}
+  .profile-head .big-avatar.unknown{background:linear-gradient(135deg,#c5cbd3,#80868b)}
+  .profile-head .big-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .profile-info{flex:1;min-width:220px}
+  .profile-info h2{margin:0 0 8px;font-size:26px;letter-spacing:.5px}
+  .profile-info .p-bio{font-size:14px;color:var(--muted);line-height:1.8;margin:10px 0 0;max-width:560px}
+  .profile-stats{display:flex;gap:22px;margin-top:14px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+  .profile-stats b{color:var(--ink);font-size:16px;margin-right:4px}
+  .profile-ops{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .btn-main{border:1px solid var(--rose);background:var(--rose);color:#fff;border-radius:999px;
+    padding:10px 22px;font-size:13px;font-weight:600}
+  .btn-main:hover{filter:brightness(.95)}
+  .btn-line{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;padding:10px 20px;font-size:13px}
+  .btn-line:hover{background:var(--soft)}
+  .btn-line.danger{color:var(--rose);border-color:#f3c9d1}
+
+  /* 联系方式卡 */
+  .contact-card{margin:6px 0 26px;border:1px solid var(--line);border-radius:16px;padding:18px 20px;background:var(--gold-soft)}
+  .contact-card h4{margin:0 0 12px;font-size:14px;color:#7a5b12;display:flex;align-items:center;gap:8px}
+  .contact-list{display:flex;gap:10px;flex-wrap:wrap}
+  .contact-item{background:#fff;border:1px solid #f0e3c4;border-radius:10px;padding:9px 14px;font-size:13px;
+    display:flex;align-items:center;gap:8px}
+  .contact-item span.k{color:#9c7b3d;font-size:12px}
+  .contact-item button{border:0;background:transparent;color:var(--blue);font-size:12px;padding:0}
+  .contact-locked{font-size:13px;color:#7a5b12;line-height:1.8}
+
+  /* 作品网格 */
+  .works-head{display:flex;align-items:center;justify-content:space-between;margin:6px 0 16px;gap:12px;flex-wrap:wrap}
+  .works-head h3{margin:0;font-size:17px}
+  .works-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:16px}
+  .work{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fff;cursor:pointer;
+    transition:.2s;display:flex;flex-direction:column}
+  .work:hover{transform:translateY(-3px);box-shadow:var(--shadow-hi)}
+  .work .thumb{position:relative;padding-top:76%;background:var(--soft);overflow:hidden}
+  .work .thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .work .thumb video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
+  .work .thumb .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:30px;color:#bdc1c6}
+  .work .thumb .tag-bgm{position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.55);color:#fff;
+    font-size:11px;padding:3px 9px;border-radius:999px;backdrop-filter:blur(4px);max-width:80%;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .work .thumb .tag-play{position:absolute;right:8px;top:8px;background:rgba(0,0,0,.55);color:#fff;
+    font-size:11px;padding:3px 8px;border-radius:999px}
+  .work .w-body{padding:12px 14px 14px}
+  .work .w-title{font-size:14px;font-weight:600;margin:0 0 6px;
+    display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+  .work .w-meta{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted)}
+  .w-like{border:0;background:transparent;color:var(--muted);font-size:12px;display:flex;align-items:center;gap:4px;padding:0}
+  .w-like.on{color:var(--rose);font-weight:600}
+
+  /* ---------- 作品详情弹层 ---------- */
   .modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-46%) scale(.96);z-index:22;
-    width:min(400px,92vw);background:#fff;border-radius:22px;padding:30px 26px;text-align:center;
-    box-shadow:0 20px 60px rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:.22s}
+    width:min(720px,94vw);max-height:90vh;overflow:auto;background:#fff;border-radius:20px;
+    box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:.22s;padding:0}
   .modal.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
-  .modal .avatar{width:96px;height:96px}
-  .modal h2{margin:0 0 6px;font-size:21px}
-  .modal .m-sub{font-size:12px;color:var(--muted);margin-bottom:14px}
-  .modal .m-bio{font-size:14px;line-height:1.9;color:var(--muted);background:var(--soft);border-radius:12px;padding:14px;margin:0 0 20px}
-  .modal .like{padding:11px 0}
+  .modal-close{position:absolute;right:12px;top:10px;border:0;background:rgba(255,255,255,.85);border-radius:50%;
+    width:32px;height:32px;font-size:20px;line-height:1;color:var(--muted);z-index:2}
+  .detail-media{background:#0d0d0d}
+  .detail-media img,.detail-media video{width:100%;max-height:60vh;object-fit:contain;display:block;margin:0 auto}
+  .detail-thumbs{display:flex;gap:8px;padding:10px 16px;overflow-x:auto;background:#fff;border-bottom:1px solid var(--line)}
+  .detail-thumbs .t{width:56px;height:56px;border-radius:8px;overflow:hidden;flex:none;border:2px solid transparent;cursor:pointer;position:relative;background:#000}
+  .detail-thumbs .t.on{border-color:var(--rose)}
+  .detail-thumbs .t img{width:100%;height:100%;object-fit:cover}
+  .detail-thumbs .t.video::after{content:'▶';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;background:rgba(0,0,0,.35)}
+  .detail-body{padding:18px 22px 22px}
+  .detail-body h3{margin:0 0 10px;font-size:19px}
+  .detail-author{display:flex;align-items:center;gap:10px;margin-bottom:14px;cursor:pointer}
+  .detail-author .mini{width:34px;height:34px;border-radius:50%;overflow:hidden;position:relative;flex:none;
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;background:linear-gradient(135deg,#f6a5b6,#e0455f)}
+  .detail-author .mini img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .detail-author .t{font-size:13px}
+  .detail-author .t b{display:block;font-size:14px}
+  .detail-author .t span{color:var(--muted);font-size:12px}
+  .detail-content{font-size:14px;line-height:1.9;color:#3c4043;white-space:pre-wrap;margin:0 0 16px}
+  .detail-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:14px}
+  .detail-bar .stat{font-size:12px;color:var(--muted);margin-right:auto}
+  .bgm-bar{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;
+    padding:9px 12px;background:var(--soft);margin-bottom:14px;font-size:13px}
+  .bgm-bar .disc{width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;font-size:11px;
+    display:flex;align-items:center;justify-content:center;flex:none}
+  .bgm-bar .disc.spin{animation:spin 4s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .bgm-bar .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bgm-bar button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 12px;font-size:12px}
+
+  /* ---------- 表单弹层（发布作品） ---------- */
+  .sheet{position:fixed;left:50%;top:50%;transform:translate(-50%,-46%) scale(.96);z-index:22;
+    width:min(600px,94vw);max-height:92vh;overflow:auto;background:#fff;border-radius:20px;
+    box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:.22s;padding:26px 24px}
+  .sheet.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+  .sheet h3{margin:0 0 6px;font-size:18px}
+  .sheet .sub{font-size:12px;color:var(--muted);margin:0 0 20px;line-height:1.7}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:7px}
+  .field label .opt{font-weight:400;color:var(--muted);font-size:12px;margin-left:4px}
+  .field input[type=text],.field input[type=url],.field textarea{width:100%;border:1px solid #dfe1e5;
+    border-radius:10px;padding:10px 12px;font-size:14px;outline:0;color:var(--ink);background:#fff}
+  .field input:focus,.field textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,115,232,.12)}
+  .field textarea{min-height:88px;resize:vertical;line-height:1.7}
+  .uploader{display:flex;gap:10px;flex-wrap:wrap}
+  .up-box{width:88px;height:88px;border:1px dashed #c8ccd2;border-radius:12px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:4px;color:var(--muted);font-size:11px;cursor:pointer;background:var(--soft);position:relative;overflow:hidden}
+  .up-box:hover{border-color:var(--blue);color:var(--blue)}
+  .up-box .plus{font-size:22px;line-height:1}
+  .up-box img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .up-box .del{position:absolute;right:2px;top:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.55);
+    color:#fff;font-size:12px;line-height:20px;text-align:center;z-index:2}
+  .up-box .prog{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(0,0,0,.1)}
+  .up-box .prog i{display:block;height:100%;width:0;background:var(--blue);transition:.2s}
+  .radio-row{display:flex;gap:18px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+  .radio-row label{display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400;margin:0}
+  .sheet-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}
+  .btn-cancel{border:1px solid var(--line);background:#fff;border-radius:999px;padding:10px 20px;font-size:13px;color:var(--muted)}
+  .btn-ok{border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:999px;padding:10px 24px;font-size:13px;font-weight:600}
+  .btn-ok:disabled{opacity:.5;cursor:not-allowed}
+
+  /* ---------- 私信面板 ---------- */
+  .chat-panel{position:fixed;right:24px;bottom:0;width:min(380px,94vw);height:min(560px,82vh);background:#fff;
+    border-radius:16px 16px 0 0;box-shadow:var(--shadow-lg);z-index:23;display:flex;flex-direction:column;
+    transform:translateY(110%);transition:.28s;overflow:hidden;border:1px solid var(--line);border-bottom:0}
+  .chat-panel.show{transform:translateY(0)}
+  .chat-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--soft)}
+  .chat-head .mini{width:34px;height:34px;border-radius:50%;overflow:hidden;position:relative;flex:none;
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;background:linear-gradient(135deg,#f6a5b6,#e0455f)}
+  .chat-head .mini img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .chat-head .t{flex:1;min-width:0}
+  .chat-head .t b{display:block;font-size:14px}
+  .chat-head .t span{font-size:11px;color:var(--muted)}
+  .chat-head button{border:0;background:transparent;font-size:20px;color:var(--muted);line-height:1}
+  .chat-body{flex:1;overflow:auto;padding:14px;background:#fbfbfc;display:flex;flex-direction:column;gap:10px}
+  .msg{max-width:78%;padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.7;word-break:break-word;position:relative}
+  .msg.them{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px}
+  .msg.me{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px}
+  .msg .tm{display:block;font-size:10px;opacity:.6;margin-top:4px}
+  .chat-empty{text-align:center;color:var(--muted);font-size:12px;padding:30px 10px;line-height:1.9}
+  .chat-foot{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:#fff}
+  .chat-foot textarea{flex:1;border:1px solid #dfe1e5;border-radius:12px;padding:9px 12px;font-size:13px;
+    resize:none;height:42px;outline:0;line-height:1.4}
+  .chat-foot textarea:focus{border-color:var(--blue)}
+  .chat-foot button{border:0;background:var(--ink);color:#fff;border-radius:12px;padding:0 18px;font-size:13px}
+  .chat-foot button:disabled{opacity:.4}
+
+  /* ---------- 提示条 ---------- */
+  .toast{position:fixed;left:50%;bottom:40px;transform:translate(-50%,20px);background:var(--ink);color:#fff;
+    padding:11px 20px;border-radius:999px;font-size:13px;z-index:40;opacity:0;pointer-events:none;transition:.22s;
+    max-width:80vw;text-align:center}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
 
   footer{border-top:1px solid var(--line);padding:22px 24px;text-align:center;color:#9aa0a6;font-size:12px;line-height:1.9}
   footer a{color:var(--blue)}
-  @media(max-width:560px){.hero{padding-top:40px}header{padding:12px 16px}main{padding:22px 14px 56px}}
+
+  /* 登录提示条 */
+  .login-tip{display:flex;align-items:center;gap:10px;justify-content:center;margin:0 auto 18px;
+    max-width:760px;padding:10px 16px;border-radius:12px;background:#eef4ff;border:1px solid #d8e6ff;
+    color:#1a4d8f;font-size:13px;flex-wrap:wrap}
+  .login-tip a{color:var(--blue);font-weight:600}
+
+  @media(max-width:560px){
+    .hero{padding-top:36px}header{padding:12px 16px}main{padding:22px 14px 56px}
+    .page-inner{padding:0 14px 60px}
+    .profile-head{gap:16px;padding:22px 0 16px}
+    .profile-head .big-avatar{width:76px;height:76px;font-size:28px}
+    .profile-info h2{font-size:21px}
+    .chat-panel{right:0;width:100vw;height:78vh}
+  }
 </style>
 </head>
 <body>
@@ -140,10 +321,12 @@
     <a id="googleLink" href="https://www.google.com/search?q=dating+matchmaking+profile" target="_blank" rel="noopener noreferrer"
        title="在 Google 搜索更多相亲资料（需可访问 Google 的网络）">↗ 去 Google 搜相亲资料</a>
     <button class="picks-btn" id="openPicks">♥ 已心动 <span class="pick-count" id="pickCount">0</span> 位</button>
+    <button id="openChats">✉ 私信<span class="dot-badge" id="unreadBadge">0</span></button>
+    <button class="primary" id="openPublish">＋ 发布作品</button>
   </nav>
 </header>
 
-<section class="hero">
+<section class="hero" id="hero">
   <h1>寻一位<em>中意的人</em></h1>
   <p>姻缘簿已为你展开 —— 搜一搜、看一看，把心动的人收进名单里 ♥</p>
   <div class="searchbox">
@@ -161,6 +344,10 @@
 </section>
 
 <main>
+  <div class="login-tip" id="loginTip" style="display:none">
+    <span>登录后才能发布作品、点赞、发私信和查看联系方式</span>
+    <a id="loginLink" href="http://192.168.68.22:5173/" target="_blank" rel="noopener noreferrer">去登录 →</a>
+  </div>
   <div class="notice" id="notice"></div>
   <div class="result-bar">
     <div>为你找到 <b id="total">0</b> 位有缘人</div>
@@ -171,7 +358,7 @@
     <div class="ico">🪷</div>
     <h3>还没有中意的人</h3>
     <p>换个关键词或筛选条件试试，也可以先去本站注册，让自己出现在姻缘簿上。</p>
-    <a href="http://192.168.119.42:5173/" target="_blank" rel="noopener noreferrer">去注册 · 入姻缘簿</a>
+    <a href="http://192.168.68.22:5173/" target="_blank" rel="noopener noreferrer">去注册 · 入姻缘簿</a>
   </div>
 </main>
 
@@ -180,24 +367,187 @@
   <div>本站为课程项目演示页，嘉宾资料仅展示昵称、性别与简介；<a id="googleFoot" href="https://www.google.com/search?q=dating+matchmaking+profile" target="_blank" rel="noopener noreferrer">在 Google 搜索相亲资料 ↗</a></div>
 </footer>
 
+<!-- 嘉宾主页（全屏） -->
+<section class="page" id="profilePage">
+  <div class="page-inner">
+    <div class="page-top">
+      <button class="back" id="backHome">← 返回姻缘簿</button>
+      <div class="ops" id="profileOps"></div>
+    </div>
+    <div id="profileContent"></div>
+    <div class="works-head">
+      <h3 id="worksTitle">作品集</h3>
+      <span class="src-tag" id="worksTag"></span>
+    </div>
+    <div class="works-grid" id="worksGrid"></div>
+    <div class="empty" id="worksEmpty" style="display:none">
+      <div class="ico">📷</div>
+      <h3>还没有作品</h3>
+      <p id="worksEmptyText">这位有缘人还没把生活分享出来。</p>
+    </div>
+  </div>
+</section>
+
 <div class="mask" id="mask"></div>
 
+<!-- 心动名单抽屉 -->
 <aside class="drawer" id="drawer">
   <div class="drawer-head"><h2>♥ 心动名单</h2><button id="closeDrawer" title="关闭">×</button></div>
   <div class="drawer-body" id="pickList"></div>
   <div class="drawer-foot"><button id="clearPicks">清空名单</button></div>
 </aside>
 
-<div class="modal" id="modal">
-  <div id="mAvatarBox"></div>
-  <h2 id="mName"></h2>
-  <div class="m-sub" id="mSub"></div>
-  <div class="m-bio" id="mBio"></div>
-  <button class="like" id="mLike"></button>
-</div>
+<!-- 私信会话列表抽屉 -->
+<aside class="drawer" id="chatDrawer">
+  <div class="drawer-head"><h2>✉ 我的私信</h2><button id="closeChatDrawer" title="关闭">×</button></div>
+  <div class="drawer-body" id="chatList"></div>
+  <div class="drawer-foot"><button id="closeChatDrawer2">关闭</button></div>
+</aside>
+
+<!-- 作品详情弹层 -->
+<div class="modal" id="detailModal"></div>
+
+<!-- 发布作品 / 联系方式 弹层 -->
+<div class="sheet" id="publishSheet"></div>
+<div class="sheet" id="contactSheet"></div>
+
+<!-- 私信对话面板 -->
+<div class="chat-panel" id="chatPanel"></div>
+
+<div class="toast" id="toast"></div>
 
 <script>
-/* ---------------- 演示嘉宾（仅当库中还没有注册用户时兜底展示） ---------------- */
+/* =========================================================
+ * 姻缘阁 · 作品集版
+ * ---------------------------------------------------------
+ * 鉴权说明：
+ *   - 主站（5173）把登录信息存在自己域下的 localStorage/sessionStorage 的 guiniang_user 中，
+ *     本页由后端（8081）托管，属于不同源，浏览器不允许直接读取。
+ *   - 因此主站打开本页时会用 ?token=...&uid=...&name=... 传过来（见 HomePage.vue），
+ *     本页存进自己的 storage，之后所有请求带 Authorization: Bearer <token>。
+ *   - 未登录也能浏览，只是发布 / 点赞 / 私信 / 联系方式需要登录。
+ * ========================================================= */
+const API = '';                      // 与页面同源（后端 8081），留空即用相对路径
+const STORE_KEY = 'dating_auth_v1';
+const PICK_KEY = 'dating_picks_v1';
+const FROM_SITE = new URLSearchParams(location.search).has('from');
+
+const state = {
+  keyword: '',
+  gender: 0,
+  pickedOnly: false,
+  list: [],
+  demo: false,
+  auth: null,          // {token, id, nickname, avatar}
+  profile: null,       // 当前主页的聚合数据
+  profileUserId: null,
+  worksPreview: null,  // 作品详情弹层数据
+  detailIndex: 0,
+  chatPeer: null,      // 正在聊天的对方 {id, name, avatar}
+  publishing: false,
+  contactLoaded: false
+};
+
+let picks = new Set();
+try { picks = new Set(JSON.parse(localStorage.getItem(PICK_KEY) || '[]')); } catch (e) { picks = new Set(); }
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const keyOf = c => String(c.id);
+const isVideo = m => (m && m.mediaType === 'video');
+
+/* ---------------- 登录态 ---------------- */
+function loadAuth() {
+  try { state.auth = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) { state.auth = null; }
+  return state.auth;
+}
+
+/** 从 URL 接收主站传过来的 token（打开新窗口时带过来跨域登录态） */
+function absorbAuthFromUrl() {
+  const q = new URLSearchParams(location.search);
+  const token = q.get('token');
+  const uid = q.get('uid');
+  if (!token || !uid) return false;
+  state.auth = {
+    token,
+    id: Number(uid),
+    nickname: q.get('name') || '',
+    avatar: q.get('avatar') || ''
+  };
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state.auth)); } catch (e) {}
+  // 把敏感参数从地址栏抹掉，避免分享链接时把 token 泄露出去
+  q.delete('token'); q.delete('uid'); q.delete('name'); q.delete('avatar');
+  const clean = location.pathname + (q.toString() ? '?' + q.toString() : '');
+  try { history.replaceState(null, '', clean); } catch (e) {}
+  return true;
+}
+
+const loggedIn = () => !!(state.auth && state.auth.token);
+
+function authHeaders(extra) {
+  const h = Object.assign({ 'Accept': 'application/json' }, extra || {});
+  if (loggedIn()) h['Authorization'] = 'Bearer ' + state.auth.token;
+  return h;
+}
+
+/** 统一请求：返回 {ok, code, message, data}，401 时自动清掉失效登录态 */
+async function api(path, opts) {
+  const o = Object.assign({}, opts || {});
+  o.headers = authHeaders(o.headers);
+  if (o.body && !(o.body instanceof FormData) && typeof o.body !== 'string') {
+    o.headers['Content-Type'] = 'application/json';
+    o.body = JSON.stringify(o.body);
+  }
+  let res;
+  try {
+    res = await fetch(API + path, o);
+  } catch (e) {
+    return { ok: false, code: 0, message: '后端服务未连接（' + e.message + '）' };
+  }
+  let json = null;
+  try { json = await res.json(); } catch (e) { /* 非 JSON（如 401 空响应） */ }
+  if (res.status === 401 || (json && json.code === 401)) {
+    // token 失效：清掉本地登录态，提示重新登录，但仍可继续浏览
+    if (loggedIn()) {
+      state.auth = null;
+      try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+      renderLoginTip();
+      toast('登录已过期，请回主站重新登录后再操作');
+    }
+    return { ok: false, code: 401, message: (json && json.message) || '请先登录' };
+  }
+  const code = json ? json.code : res.status;
+  return {
+    ok: res.ok && code === 200,
+    code,
+    message: (json && json.message) || (res.ok ? '' : '请求失败（' + res.status + '）'),
+    data: json ? json.data : null
+  };
+}
+
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+function renderLoginTip() {
+  $('loginTip').style.display = loggedIn() ? 'none' : 'flex';
+}
+
+/* 登录链接带上回跳参数，主站登录后能原路返回来 */
+function buildLoginLink() {
+  const base = 'http://192.168.68.22:5173/';
+  try {
+    const u = new URL(base);
+    u.searchParams.set('redirect', location.href.split('?')[0]);
+    return u.toString();
+  } catch (e) { return base; }
+}
+
+/* ---------------- 演示嘉宾（库中无注册用户时兜底） ---------------- */
 const DEMO = [
   {id:'d1', nickname:'云想衣裳', gender:2, avatar:'', bio:'爱看旧书与雨天，想找一位能一起慢慢逛街的人。', tag:'新入阁', joinedAt:'2026-11-01', demo:true},
   {id:'d2', nickname:'沈砚',     gender:1, avatar:'', bio:'会做一手好菜，周末常去爬山，话不多但很靠谱。', tag:'姻缘簿在册', joinedAt:'2026-10-22', demo:true},
@@ -207,24 +557,13 @@ const DEMO = [
   {id:'d6', nickname:'归舟',     gender:1, avatar:'', bio:'在城里做设计，闲暇写点小诗，等一个懂的人。', tag:'新入阁', joinedAt:'2026-11-04', demo:true}
 ];
 
-const PICK_KEY = 'dating_picks_v1';
-const FROM_SITE = new URLSearchParams(location.search).has('from');
-const state = {keyword:'', gender:0, pickedOnly:false, list:[], demo:false, detail:null};
-let picks;
-try { picks = new Set(JSON.parse(localStorage.getItem(PICK_KEY) || '[]')); }
-catch (e) { picks = new Set(); }
-
-const $ = id => document.getElementById(id);
-const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const keyOf = c => String(c.id);
-
-function savePicks(){
+/* ---------------- 数据加载 ---------------- */
+function savePicks() {
   try { localStorage.setItem(PICK_KEY, JSON.stringify([...picks])); } catch (e) {}
   $('pickCount').textContent = picks.size;
 }
 
-/* ---------------- 数据加载 ---------------- */
-async function load(){
+async function load() {
   $('srcTag').textContent = '正在读取姻缘簿…';
   $('srcTag').className = 'src-tag';
   let list = [], demo = false, err = '';
@@ -232,7 +571,7 @@ async function load(){
     const url = '/api/dating/candidates?limit=100'
       + '&keyword=' + encodeURIComponent(state.keyword)
       + (state.gender ? '&gender=' + state.gender : '');
-    const res = await fetch(url, {headers:{'Accept':'application/json'}});
+    const res = await fetch(API + url, { headers: authHeaders() });
     const json = await res.json();
     list = (json && json.code === 200 && Array.isArray(json.data)) ? json.data : [];
     if (!list.length) { demo = true; err = '库中暂无注册用户'; }
@@ -243,13 +582,13 @@ async function load(){
   if (demo) {
     state.list = DEMO; state.demo = true;
     $('notice').innerHTML = '⚠️ ' + esc(err) + '，当前展示的是 <b>演示嘉宾</b>。注册用户出现后会自动改为展示真实资料。'
-      + (FROM_SITE ? '<br>🪷 你是从主站跳转过来的，慢慢挑，心动的人会记在这台浏览器里。' : '');
+      + (FROM_SITE ? '<br>💡 你是从主站跳转过来的，慢慢挑，心动的人会记在这台浏览器里。' : '');
     $('notice').classList.add('show');
     $('srcTag').textContent = '演示资料'; $('srcTag').className = 'src-tag demo';
   } else {
     state.list = list; state.demo = false;
     if (FROM_SITE) {
-      $('notice').innerHTML = '🪷 你是从主站跳转过来的 —— 慢慢挑，心动的人会记在这台浏览器里。';
+      $('notice').innerHTML = '💡 你是从主站跳转过来的 —— 点一下嘉宾卡片就能进主页看 TA 的作品集。';
       $('notice').classList.add('show');
     } else {
       $('notice').classList.remove('show');
@@ -259,8 +598,7 @@ async function load(){
   render();
 }
 
-/* 演示模式下所有筛选在前端完成；真实模式下后端已按关键词/性别过滤 */
-function visible(){
+function visible() {
   let list = state.list;
   if (state.demo) {
     const kw = state.keyword.trim().toLowerCase();
@@ -272,99 +610,573 @@ function visible(){
   return list;
 }
 
-function avatarHtml(c){
+function avatarHtml(c, cls) {
   const g = Number(c.gender) === 1 ? 'male' : Number(c.gender) === 2 ? '' : 'unknown';
-  const img = c.avatar
-    ? '<img src="' + esc(c.avatar) + '" alt="" onerror="this.style.display=\'none\'">'
-    : '';
-  return '<div class="avatar ' + g + '" data-avatar="' + esc(c.id) + '">'
-       + esc(c.nickname.charAt(0)) + img + '</div>';
+  const img = c.avatar ? '<img src="' + esc(c.avatar) + '" alt="" onerror="this.style.display=\'none\'">' : '';
+  return '<div class="avatar ' + g + ' ' + (cls || '') + '">' + esc((c.nickname || '?').charAt(0)) + img + '</div>';
 }
 
-function badge(c){
+function badge(c) {
   const g = Number(c.gender);
   const label = g === 1 ? '公子' : g === 2 ? '姑娘' : '未留';
   return '<span class="badge g' + g + '">' + label + '</span>'
        + '<span class="badge">' + esc(c.tag || '姻缘簿在册') + '</span>';
 }
 
-function render(){
+function render() {
   const list = visible();
   $('total').textContent = list.length;
   $('empty').style.display = list.length ? 'none' : 'block';
   $('grid').innerHTML = list.map(c => {
     const on = picks.has(keyOf(c));
-    return '<article class="card">'
+    return '<article class="card" data-open="' + esc(c.id) + '">'
       + avatarHtml(c)
-      + '<div class="name" data-name="' + esc(c.id) + '">' + esc(c.nickname) + '</div>'
+      + '<div class="name">' + esc(c.nickname) + '</div>'
       + '<div class="meta">' + badge(c) + '</div>'
       + '<p class="bio">' + esc(c.bio) + '</p>'
-      + '<button class="like ' + (on ? 'on' : '') + '" data-like="' + esc(c.id) + '">'
-      + (on ? '♥ 已心动' : '♡ 心动') + '</button>'
+      + '<div class="card-actions">'
+      +   '<button class="like ' + (on ? 'on' : '') + '" data-like="' + esc(c.id) + '">'
+      +     (on ? '♥ 已心动' : '♡ 心动') + '</button>'
+      +   '<button class="btn-ghost" data-profile="' + esc(c.id) + '">主页</button>'
+      + '</div>'
       + '</article>';
   }).join('');
 }
 
-function find(id){ return state.list.find(c => keyOf(c) === String(id)); }
+function find(id) { return state.list.find(c => keyOf(c) === String(id)); }
 
-function toggleLike(id){
+function toggleLike(id) {
   const k = String(id);
   if (picks.has(k)) picks.delete(k); else picks.add(k);
   savePicks();
-  if (state.demo || state.pickedOnly) render(); else {
-    // 真实模式：仅刷新按钮态，不重新请求接口
-    document.querySelectorAll('[data-like]').forEach(btn => {
-      const on = picks.has(String(btn.dataset.like));
-      btn.className = 'like' + (on ? ' on' : '');
-      btn.textContent = on ? '♥ 已心动' : '♡ 心动';
-    });
-  }
+  render();
   renderPicks();
-  if (state.detail && keyOf(state.detail) === k) renderModal();
 }
 
 /* ---------------- 心动抽屉 ---------------- */
-function renderPicks(){
+function renderPicks() {
   const chosen = state.list.filter(c => picks.has(keyOf(c)));
   const unknown = [...picks].filter(k => !state.list.some(c => keyOf(c) === k));
   let html = chosen.map(c =>
-    '<div class="pick-row"><div class="mini">' + esc(c.nickname.charAt(0)) + '</div>'
-    + '<div class="txt"><b>' + esc(c.nickname) + '</b><span>' + esc(c.bio) + '</span></div>'
-    + '<button data-remove="' + esc(c.id) + '" title="移出名单">×</button></div>').join('');
-  if (unknown.length) html += '<div class="pick-row"><div class="txt"><span>另有 ' + unknown.length + ' 位往期心动记录（当前列表未加载）</span></div></div>';
+    '<div class="pick-row"><div class="mini" data-open="' + esc(c.id) + '">' + esc((c.nickname || '?').charAt(0)) + '</div>'
+    + '<div class="txt" data-open="' + esc(c.id) + '"><b>' + esc(c.nickname) + '</b><span>' + esc(c.bio) + '</span></div>'
+    + '<button class="rm" data-remove="' + esc(c.id) + '" title="移出名单">×</button></div>').join('');
+  if (unknown.length) html += '<div class="pick-row blank">另有 ' + unknown.length + ' 位往期心动记录（当前列表未加载）</div>';
   $('pickList').innerHTML = html || '<div class="empty" style="padding:40px 0"><div class="ico">💌</div><h3>名单还是空的</h3><p>看到中意的人，点一下「♡ 心动」就会收进来。</p></div>';
 }
 
-function closeOverlays(){
+/* ---------------- 遮罩层统一管理 ---------------- */
+function closeOverlays(keepChat) {
   $('mask').classList.remove('show');
   $('drawer').classList.remove('show');
-  $('modal').classList.remove('show');
-  state.detail = null;
+  $('chatDrawer').classList.remove('show');
+  $('detailModal').classList.remove('show');
+  $('publishSheet').classList.remove('show');
+  $('contactSheet').classList.remove('show');
+  if (!keepChat) $('chatPanel').classList.remove('show');
+  stopBgm();
 }
 
-/* ---------------- 详情弹层 ---------------- */
-function renderModal(){
-  const c = state.detail;
-  if (!c) return;
-  $('mAvatarBox').innerHTML = avatarHtml(c);
-  $('mName').textContent = c.nickname;
-  $('mSub').textContent = (Number(c.gender) === 1 ? '公子' : Number(c.gender) === 2 ? '姑娘' : '性别未留')
-    + ' · ' + (c.tag || '姻缘簿在册') + (c.joinedAt ? ' · ' + c.joinedAt + ' 入阁' : '');
-  $('mBio').textContent = c.bio;
-  const on = picks.has(keyOf(c));
-  $('mLike').textContent = on ? '♥ 已心动，点击查看名单' : '♡ 收进心动名单';
-  $('mLike').className = 'like' + (on ? ' on' : '');
+/**
+ * 跳到某人的主页（会同时关掉弹层）。
+ * 遮罩的点击事件是冒泡上来的，若直接在同一轮事件里 openProfile，
+ * 随后冒泡到 mask 的 handler 又会把刚打开的主页关掉。
+ * 因此用 setTimeout(0) 把「打开主页」推迟到当前事件完全处理完之后。
+ */
+function goProfileFromOverlay(id) {
+  closeOverlays();
+  setTimeout(() => openProfile(id), 0);
 }
-function openModal(id){
-  const c = find(id);
-  if (!c) return;
-  state.detail = c;
-  renderModal();
+
+/* =========================================================
+ * 嘉宾主页
+ * ========================================================= */
+async function openProfile(userId) {
+  if (state.demo) {
+    // 演示嘉宾没有真实数据，只提示
+    const c = find(userId);
+    toast((c ? c.nickname : '这位有缘人') + ' 是演示资料，注册用户才能查看主页与作品集');
+    return;
+  }
+  state.profileUserId = Number(userId);
+  $('profilePage').classList.add('show');
+  document.body.style.overflow = 'hidden';
+  $('profileContent').innerHTML = '<div class="empty"><div class="ico">🪷</div><p>正在翻开姻缘簿…</p></div>';
+  $('worksGrid').innerHTML = '';
+  $('worksEmpty').style.display = 'none';
+
+  const r = await api('/api/dating/users/' + userId);
+  if (!r.ok) {
+    $('profileContent').innerHTML = '<div class="empty"><div class="ico">⚠️</div><h3>打不开这位有缘人的主页</h3><p>' + esc(r.message || '请稍后再试') + '</p></div>';
+    return;
+  }
+  state.profile = r.data;
+  renderProfile();
+}
+
+function closeProfile() {
+  $('profilePage').classList.remove('show');
+  document.body.style.overflow = '';
+  state.profile = null;
+  state.profileUserId = null;
+  stopBgm();
+}
+
+function renderProfile() {
+  const p = state.profile;
+  if (!p) return;
+  const c = p.profile;
+  const works = p.works || [];
+  const totalLikes = works.reduce((s, w) => s + (w.likeCount || 0), 0);
+
+  // 顶部资料
+  let head = '<div class="profile-head">'
+    + avatarHtml(c, 'big-avatar')
+    + '<div class="profile-info">'
+    +   '<h2>' + esc(c.nickname) + '</h2>'
+    +   '<div class="meta" style="justify-content:flex-start">' + badge(c) + '</div>'
+    +   '<p class="p-bio">' + esc(c.bio) + '</p>'
+    +   '<div class="profile-stats">'
+    +     '<span><b>' + works.length + '</b>件作品</span>'
+    +     '<span><b>' + totalLikes + '</b>收到的赞</span>'
+    +     (c.joinedAt ? '<span><b>' + esc(c.joinedAt) + '</b>入阁</span>' : '')
+    +   '</div>'
+    + '</div></div>';
+
+  // 操作按钮
+  let ops = '';
+  if (p.mine) {
+    ops = '<button class="btn-line" id="editContactBtn">我的联系方式</button>'
+        + '<button class="btn-main" id="publishFromProfile">＋ 发布作品</button>';
+  } else {
+    ops = '<button class="btn-line" data-hanxin="' + esc(c.id) + '">♡ 心动</button>'
+        + '<button class="btn-main" data-chat="' + esc(c.id) + '" data-name="' + esc(c.nickname) + '" data-avatar="' + esc(c.avatar) + '">✉ 发私信</button>';
+  }
+  $('profileOps').innerHTML = ops;
+
+  // 联系方式
+  let contact = '';
+  if (p.contactVisible && p.contact) {
+    const it = (k, v) => v ? '<div class="contact-item"><span class="k">' + k + '</span><b>' + esc(v) + '</b>'
+      + '<button data-copy="' + esc(v) + '">复制</button></div>' : '';
+    const body = it('微信', p.contact.wechat) + it('QQ', p.contact.qq) + it('手机', p.contact.phone) + it('其他', p.contact.other);
+    contact = '<div class="contact-card"><h4>📮 联系方式' + (p.mine ? '（仅你可见的设置项）' : '') + '</h4>'
+      + '<div class="contact-list">' + (body || '<span class="contact-locked">还没有填写联系方式</span>') + '</div></div>';
+  } else if (p.mine) {
+    contact = '<div class="contact-card"><h4>📮 联系方式</h4><div class="contact-locked">'
+      + '你还没有填写联系方式。<button class="btn-ghost" id="editContactBtn2" style="padding:4px 12px">现在填写</button></div></div>';
+  } else if (!p.loggedIn) {
+    contact = '<div class="contact-card"><h4>📮 联系方式</h4><div class="contact-locked">'
+      + '登录后可发私信；与 TA 有过私信往来后，就能看到联系方式。</div></div>';
+  } else {
+    contact = '<div class="contact-card"><h4>📮 联系方式</h4><div class="contact-locked">'
+      + '对方设置了「私信过来往才可见」——先发条私信打个招呼吧，聊过之后这里就会显示。</div></div>';
+  }
+
+  $('profileContent').innerHTML = head + contact;
+  $('worksTitle').textContent = p.mine ? '我的作品集' : '作品集';
+  $('worksTag').textContent = works.length + ' 件 · 点击查看详情';
+
+  // 作品网格
+  $('worksEmpty').style.display = works.length ? 'none' : 'block';
+  $('worksEmptyText').textContent = p.mine
+    ? '你还没发布作品。点右上角「发布作品」，把照片、视频和喜欢的 BGM 分享出来吧。'
+    : '这位有缘人还没把生活分享出来。';
+  $('worksGrid').innerHTML = works.map(w => workCardHtml(w)).join('');
+}
+
+function workCardHtml(w) {
+  const first = (w.media || [])[0];
+  let thumb = '';
+  if (first) {
+    thumb = isVideo(first)
+      ? '<video src="' + esc(first.url) + '" muted playsinline preload="metadata"></video>'
+      : '<img src="' + esc(first.url) + '" alt="" loading="lazy">';
+  } else if (w.cover) {
+    thumb = '<img src="' + esc(w.cover) + '" alt="" loading="lazy">';
+  } else {
+    thumb = '<div class="ph">🖼</div>';
+  }
+  const videoCount = (w.media || []).filter(isVideo).length;
+  return '<article class="work" data-work="' + w.id + '">'
+    + '<div class="thumb">' + thumb
+    +   (w.bgmUrl ? '<span class="tag-bgm">♪ ' + esc(w.bgmName || '配乐') + '</span>' : '')
+    +   (videoCount ? '<span class="tag-play">▶ 视频</span>' : '')
+    + '</div>'
+    + '<div class="w-body">'
+    +   '<p class="w-title">' + esc(w.title) + '</p>'
+    +   '<div class="w-meta">'
+    +     '<span>' + esc((w.createdAt || '').slice(0, 10)) + '</span>'
+    +     '<button class="w-like ' + (w.liked ? 'on' : '') + '" data-wlike="' + w.id + '">'
+    +       (w.liked ? '♥' : '♡') + ' ' + (w.likeCount || 0) + '</button>'
+    +   '</div>'
+    + '</div></article>';
+}
+
+/* =========================================================
+ * 作品详情 + BGM
+ * ========================================================= */
+const bgmAudio = new Audio();
+bgmAudio.loop = true;
+bgmAudio.volume = 0.55;
+
+function stopBgm() {
+  try { bgmAudio.pause(); bgmAudio.currentTime = 0; } catch (e) {}
+  document.querySelectorAll('.bgm-bar .disc').forEach(d => d.classList.remove('spin'));
+  document.querySelectorAll('[data-bgm-toggle]').forEach(b => b.textContent = '播放');
+}
+
+function openWorkDetail(workOrId) {
+  const all = (state.profile && state.profile.works) || [];
+  let w = typeof workOrId === 'object' ? workOrId : all.find(x => String(x.id) === String(workOrId));
+  if (!w) { toast('作品已不存在'); return; }
+  state.worksPreview = w;
+  state.detailIndex = 0;
+  renderWorkDetail();
   $('mask').classList.add('show');
-  $('modal').classList.add('show');
+  $('detailModal').classList.add('show');
 }
 
-/* ---------------- 事件绑定 ---------------- */
+function renderWorkDetail() {
+  const w = state.worksPreview;
+  if (!w) return;
+  const media = w.media || [];
+  const cur = media[state.detailIndex] || null;
+  const author = { nickname: w.authorName, avatar: w.authorAvatar, gender: w.authorGender, id: w.userId };
+
+  let stage = '';
+  if (cur) {
+    stage = isVideo(cur)
+      ? '<video src="' + esc(cur.url) + '" controls playsinline preload="metadata"></video>'
+      : '<img src="' + esc(cur.url) + '" alt="">';
+  } else if (w.cover) {
+    stage = '<img src="' + esc(w.cover) + '" alt="">';
+  } else {
+    stage = '<div style="height:220px;display:flex;align-items:center;justify-content:center;color:#666;font-size:34px">🖼</div>';
+  }
+
+  const thumbs = media.length > 1
+    ? '<div class="detail-thumbs">' + media.map((m, i) =>
+        '<div class="t ' + (i === state.detailIndex ? 'on' : '') + (isVideo(m) ? ' video' : '') + '" data-idx="' + i + '">'
+        + (isVideo(m) ? '' : '<img src="' + esc(m.url) + '" alt="">') + '</div>').join('') + '</div>'
+    : '';
+
+  const bgm = w.bgmUrl
+    ? '<div class="bgm-bar"><span class="disc">♪</span><span class="nm">' + esc(w.bgmName || '配乐') + '</span>'
+      + '<button data-bgm="' + esc(w.bgmUrl) + '" data-bgm-toggle>播放</button></div>'
+    : '';
+
+  const likeBtn = '<button class="' + (w.liked ? 'like on' : 'like') + '" style="flex:none;padding:9px 20px" data-wlike="' + w.id + '">'
+    + (w.liked ? '♥ 已赞 ' : '♡ 点赞 ') + (w.likeCount || 0) + '</button>';
+
+  const del = w.mine ? '<button class="btn-line danger" data-delwork="' + w.id + '">删除作品</button>' : '';
+
+  $('detailModal').innerHTML =
+      '<button class="modal-close" id="closeDetail">×</button>'
+    + '<div class="detail-media">' + stage + '</div>'
+    + thumbs
+    + '<div class="detail-body">'
+    +   '<div class="detail-author" data-open="' + esc(w.userId) + '" data-close-detail="1">'
+    +     '<div class="mini">' + esc((w.authorName || '?').charAt(0))
+    +       (w.authorAvatar ? '<img src="' + esc(w.authorAvatar) + '" alt="">' : '') + '</div>'
+    +     '<div class="t"><b>' + esc(w.authorName) + '</b><span>' + esc(w.createdAt || '') + ' 发布</span></div>'
+    +   '</div>'
+    +   '<h3>' + esc(w.title) + '</h3>'
+    +   (w.content ? '<p class="detail-content">' + esc(w.content) + '</p>' : '')
+    +   bgm
+    +   '<div class="detail-bar">'
+    +     '<span class="stat">' + (w.viewCount || 0) + ' 次浏览 · ' + (w.likeCount || 0) + ' 次点赞</span>'
+    +     del + likeBtn
+    +   '</div>'
+    + '</div>';
+}
+
+async function toggleWorkLike(workId) {
+  if (!loggedIn()) { toast('登录后才能点赞，请先回主站登录'); return; }
+  const r = await api('/api/dating/me/likes/' + workId, { method: 'POST' });
+  if (!r.ok) { toast(r.message || '点赞失败'); return; }
+  const liked = !!r.data.liked;
+  const count = r.data.likeCount || 0;
+  // 同步主页数据、详情弹层、作品卡片三处状态
+  if (state.profile && state.profile.works) {
+    const w = state.profile.works.find(x => String(x.id) === String(workId));
+    if (w) { w.liked = liked; w.likeCount = count; }
+  }
+  if (state.profile && state.profileUserId) renderProfile();
+  if (state.worksPreview && String(state.worksPreview.id) === String(workId)) {
+    state.worksPreview.liked = liked;
+    state.worksPreview.likeCount = count;
+    renderWorkDetail();
+  }
+}
+
+async function deleteWork(workId) {
+  if (!confirm('确定删除这件作品吗？删除后无法恢复。')) return;
+  const r = await api('/api/dating/me/works/' + workId, { method: 'DELETE' });
+  if (!r.ok) { toast(r.message || '删除失败'); return; }
+  toast('作品已移除');
+  closeOverlays();
+  if (state.profile) {
+    state.profile.works = (state.profile.works || []).filter(w => String(w.id) !== String(workId));
+    renderProfile();
+  }
+}
+
+/* =========================================================
+ * 发布作品
+ * ========================================================= */
+const pub = { images: [], video: null, videoName: '' };
+
+function openPublish() {
+  if (!loggedIn()) { toast('请先回主站登录，再来发布作品'); return; }
+  // 从「我的主页」打开时沿用当前主页；否则先拿自己的 id
+  if (!state.profileUserId) {
+    toast('请先进入「我的主页」再发布作品');
+    return;
+  }
+  pub.images = []; pub.video = null; pub.videoName = '';
+  renderPublishSheet();
+  $('mask').classList.add('show');
+  $('publishSheet').classList.add('show');
+}
+
+function renderPublishSheet() {
+  const maxImg = 9;
+  let up = pub.images.map((u, i) =>
+    '<div class="up-box"><img src="' + esc(u) + '" alt=""><span class="del" data-rmimg="' + i + '">×</span></div>').join('');
+  if (pub.images.length < maxImg) {
+    up += '<label class="up-box"><span class="plus">＋</span><span>照片 ' + pub.images.length + '/' + maxImg + '</span>'
+      + '<input type="file" accept="image/*" multiple hidden id="fileImg"></label>';
+  }
+
+  const vid = pub.video
+    ? '<div class="up-box" style="width:120px;height:88px;background:#000">'
+      + '<video src="' + esc(pub.video) + '" muted playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
+      + '<span class="del" data-rmvideo="1">×</span></div>'
+    : '<label class="up-box" style="width:120px"><span class="plus">▶</span><span>视频（≤120MB）</span>'
+      + '<input type="file" accept="video/*" hidden id="fileVideo"></label>';
+
+  $('publishSheet').innerHTML =
+      '<button class="modal-close" id="closePublish">×</button>'
+    + '<h3>发布作品</h3>'
+    + '<p class="sub">照片、视频与 BGM 会一起展示在你的主页作品集里；别人可以点赞、发私信找你。</p>'
+    + '<div class="field"><label>标题</label>'
+    +   '<input type="text" id="pubTitle" maxlength="80" placeholder="例如：周末的西湖与一杯拿铁"></div>'
+    + '<div class="field"><label>文案 <span class="opt">选填</span></label>'
+    +   '<textarea id="pubContent" maxlength="1000" placeholder="说说这件作品背后的故事…"></textarea></div>'
+    + '<div class="field"><label>照片 <span class="opt">最多 9 张，第一张作为封面</span></label>'
+    +   '<div class="uploader">' + up + '</div></div>'
+    + '<div class="field"><label>视频 <span class="opt">选填，最多 1 段</span></label>'
+    +   '<div class="uploader">' + vid + '</div></div>'
+    + '<div class="field"><label>BGM <span class="opt">选填，填写可直接播放的音频直链</span></label>'
+    +   '<input type="url" id="pubBgm" placeholder="https://.../music.mp3">'
+    +   '<div style="font-size:12px;color:var(--muted);margin-top:6px">'
+    +     '也可以点下面的示例曲目快速填入（需能联网访问）：'
+    +     '<span style="display:inline-flex;gap:8px;margin-left:6px;flex-wrap:wrap">'
+    +       '<button class="btn-ghost" style="padding:3px 10px;font-size:12px" data-bgm-preset="https://music.163.com/song/media/outer/url?id=1901371647.mp3|晚风">晚风</button>'
+    +       '<button class="btn-ghost" style="padding:3px 10px;font-size:12px" data-bgm-preset="https://music.163.com/song/media/outer/url?id=1824020871.mp3|初见">初见</button>'
+    +     '</span>'
+    +   '</div></div>'
+    + '<div class="field"><label>BGM 名称 <span class="opt">选填</span></label>'
+    +   '<input type="text" id="pubBgmName" maxlength="100" placeholder="例如：晚风"></div>'
+    + '<div class="sheet-foot">'
+    +   '<button class="btn-cancel" id="cancelPublish">取消</button>'
+    +   '<button class="btn-ok" id="submitPublish">发布</button>'
+    + '</div>';
+}
+
+/** 上传单张图片（用 XHR 才能拿到进度） */
+function uploadFile(file, kind, onProgress) {
+  return new Promise((resolve) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', API + '/api/dating/me/upload/' + kind);
+    if (loggedIn()) xhr.setRequestHeader('Authorization', 'Bearer ' + state.auth.token);
+    xhr.upload.onprogress = e => { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total); };
+    xhr.onload = () => {
+      let json = null;
+      try { json = JSON.parse(xhr.responseText); } catch (e) {}
+      if (xhr.status === 200 && json && json.code === 200) resolve({ ok: true, url: json.data });
+      else resolve({ ok: false, message: (json && json.message) || ('上传失败（' + xhr.status + '）') });
+    };
+    xhr.onerror = () => resolve({ ok: false, message: '网络错误，上传中断' });
+    xhr.send(fd);
+  });
+}
+
+async function submitPublish() {
+  const title = ($('pubTitle').value || '').trim();
+  if (!title) { toast('给作品起个标题吧'); $('pubTitle').focus(); return; }
+  if (!pub.images.length && !pub.video) { toast('至少上传一张照片或一段视频'); return; }
+
+  const btn = $('submitPublish');
+  btn.disabled = true; btn.textContent = '发布中…';
+  const r = await api('/api/dating/me/works', {
+    method: 'POST',
+    body: {
+      title,
+      content: ($('pubContent').value || '').trim(),
+      images: pub.images,
+      videoUrl: pub.video || '',
+      bgmUrl: ($('pubBgm').value || '').trim(),
+      bgmName: ($('pubBgmName').value || '').trim()
+    }
+  });
+  btn.disabled = false; btn.textContent = '发布';
+  if (!r.ok) { toast(r.message || '发布失败'); return; }
+
+  toast('作品已收入阁中 ♥');
+  closeOverlays();
+  // 刷新当前主页的作品集
+  if (state.profileUserId) openProfile(state.profileUserId);
+}
+
+/* =========================================================
+ * 联系方式编辑
+ * ========================================================= */
+async function openContactSheet() {
+  if (!loggedIn()) { toast('请先登录'); return; }
+  $('contactSheet').innerHTML = '<div class="empty"><p>正在读取…</p></div>';
+  $('mask').classList.add('show');
+  $('contactSheet').classList.add('show');
+  const r = await api('/api/dating/me/contact');
+  const c = (r.ok && r.data) ? r.data : {};
+  $('contactSheet').innerHTML =
+      '<button class="modal-close" id="closeContact">×</button>'
+    + '<h3>我的联系方式</h3>'
+    + '<p class="sub">留空则不在主页显示。默认只对「跟你私信过的人」可见，避免被陌生人打扰。</p>'
+    + '<div class="field"><label>微信号</label><input type="text" id="cWechat" maxlength="60" value="' + esc(c.wechat || '') + '" placeholder="选填"></div>'
+    + '<div class="field"><label>QQ</label><input type="text" id="cQq" maxlength="30" value="' + esc(c.qq || '') + '" placeholder="选填"></div>'
+    + '<div class="field"><label>手机号 <span class="opt">与注册手机号无关，可留空</span></label>'
+    +   '<input type="text" id="cPhone" maxlength="30" value="' + esc(c.phone || '') + '" placeholder="选填"></div>'
+    + '<div class="field"><label>其他 <span class="opt">邮箱、小红书号等</span></label>'
+    +   '<input type="text" id="cOther" maxlength="120" value="' + esc(c.other || '') + '" placeholder="选填"></div>'
+    + '<div class="field"><label>可见范围</label><div class="radio-row">'
+    +   '<label><input type="radio" name="cvis" value="0" ' + (Number(c.visible) === 1 ? '' : 'checked') + '> 仅私信过来往的人可见（推荐）</label>'
+    +   '<label><input type="radio" name="cvis" value="1" ' + (Number(c.visible) === 1 ? 'checked' : '') + '> 所有登录用户可见</label>'
+    + '</div></div>'
+    + '<div class="sheet-foot">'
+    +   '<button class="btn-cancel" id="cancelContact">取消</button>'
+    +   '<button class="btn-ok" id="saveContact">保存</button>'
+    + '</div>';
+}
+
+async function saveContact() {
+  const visible = document.querySelector('input[name=cvis]:checked');
+  const body = {
+    wechat: ($('cWechat').value || '').trim(),
+    qq: ($('cQq').value || '').trim(),
+    phone: ($('cPhone').value || '').trim(),
+    other: ($('cOther').value || '').trim(),
+    visible: visible && visible.value === '1' ? 1 : 0
+  };
+  const r = await api('/api/dating/me/contact', { method: 'PUT', body });
+  if (!r.ok) { toast(r.message || '保存失败'); return; }
+  toast('联系方式已保存');
+  closeOverlays();
+  if (state.profileUserId) openProfile(state.profileUserId);
+}
+
+/* =========================================================
+ * 私信
+ * ========================================================= */
+async function openChatList() {
+  if (!loggedIn()) { toast('登录后才能查看私信，请先回主站登录'); return; }
+  $('chatList').innerHTML = '<div class="empty" style="padding:30px 0"><p>正在读取…</p></div>';
+  $('mask').classList.add('show');
+  $('chatDrawer').classList.add('show');
+  const r = await api('/api/dating/me/conversations');
+  if (!r.ok) {
+    $('chatList').innerHTML = '<div class="empty" style="padding:30px 0"><p>' + esc(r.message || '读取失败') + '</p></div>';
+    return;
+  }
+  const list = r.data || [];
+  if (!list.length) {
+    $('chatList').innerHTML = '<div class="empty" style="padding:36px 0"><div class="ico">✉</div>'
+      + '<h3>还没有私信</h3><p>去某位有缘人的主页，点「发私信」打个招呼吧。</p></div>';
+    return;
+  }
+  $('chatList').innerHTML = list.map(c =>
+    '<div class="pick-row" data-chat="' + c.peerId + '" data-name="' + esc(c.peerName) + '" data-avatar="' + esc(c.peerAvatar || '') + '" data-close-drawer="1">'
+    + '<div class="mini">' + esc((c.peerName || '?').charAt(0)) + (c.peerAvatar ? '<img src="' + esc(c.peerAvatar) + '" alt="">' : '') + '</div>'
+    + '<div class="txt"><b>' + esc(c.peerName) + '</b><span>' + (c.lastFromMe ? '我：' : '') + esc(c.lastMessage) + '</span></div>'
+    + (c.unread > 0 ? '<span class="unread">' + c.unread + '</span>' : '<span style="font-size:11px;color:#aaa">' + esc((c.lastTime || '').slice(5, 16)) + '</span>')
+    + '</div>').join('');
+}
+
+async function openChat(peer) {
+  if (!loggedIn()) { toast('登录后才能发私信，请先回主站登录'); return; }
+  if (state.auth && Number(state.auth.id) === Number(peer.id)) { toast('这是你自己的主页'); return; }
+  state.chatPeer = peer;
+  $('chatPanel').innerHTML =
+      '<div class="chat-head"><div class="mini">' + esc((peer.name || '?').charAt(0))
+    +   (peer.avatar ? '<img src="' + esc(peer.avatar) + '" alt="">' : '') + '</div>'
+    +   '<div class="t"><b>' + esc(peer.name || '有缘人') + '</b><span>与 TA 私信 · 聊过之后可见联系方式</span></div>'
+    +   '<button id="closeChat">×</button></div>'
+    + '<div class="chat-body" id="chatBody"><div class="chat-empty">正在读取聊天记录…</div></div>'
+    + '<div class="chat-foot"><textarea id="chatInput" maxlength="1000" placeholder="说点什么…（Enter 发送，Shift+Enter 换行）"></textarea>'
+    +   '<button id="sendChat">发送</button></div>';
+  $('chatPanel').classList.add('show');
+  $('chatInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+  });
+  $('sendChat').addEventListener('click', sendChat);
+  $('closeChat').addEventListener('click', () => $('chatPanel').classList.remove('show'));
+
+  await loadChatMessages(peer.id);
+  $('chatInput').focus();
+}
+
+async function loadChatMessages(peerId) {
+  const box = $('chatBody');
+  if (!box) return;
+  const r = await api('/api/dating/messages/' + peerId);
+  if (!r.ok) {
+    box.innerHTML = '<div class="chat-empty">' + esc(r.message || '读取失败') + '</div>';
+    return;
+  }
+  const list = r.data || [];
+  box.innerHTML = list.length
+    ? list.map(m =>
+        '<div class="msg ' + (m.mine ? 'me' : 'them') + '">' + esc(m.content)
+        + '<span class="tm">' + esc((m.createdAt || '').slice(5, 16)) + '</span></div>').join('')
+    : '<div class="chat-empty">还没有聊过，先打个招呼吧 👋<br>聊过之后，就能看到对方的联系方式。</div>';
+  box.scrollTop = box.scrollHeight;
+  refreshUnread();
+}
+
+async function sendChat() {
+  const input = $('chatInput');
+  if (!input || !state.chatPeer) return;
+  const text = (input.value || '').trim();
+  if (!text) return;
+  const btn = $('sendChat');
+  btn.disabled = true;
+  const r = await api('/api/dating/me/messages/' + state.chatPeer.id, { method: 'POST', body: { content: text } });
+  btn.disabled = false;
+  if (!r.ok) { toast(r.message || '发送失败'); return; }
+  input.value = '';
+  await loadChatMessages(state.chatPeer.id);
+  // 发过消息后对方联系方式可能变为可见，若当前就在 TA 的主页上则刷新
+  if (state.profileUserId && String(state.profileUserId) === String(state.chatPeer.id)) {
+    openProfile(state.profileUserId);
+  }
+}
+
+async function refreshUnread() {
+  if (!loggedIn()) { $('unreadBadge').classList.remove('show'); return; }
+  const r = await api('/api/dating/me/unread');
+  if (!r.ok) return;
+  const n = Number(r.data) || 0;
+  const badge = $('unreadBadge');
+  badge.textContent = n > 99 ? '99+' : String(n);
+  badge.classList.toggle('show', n > 0);
+}
+
+/* =========================================================
+ * 事件绑定
+ * ========================================================= */
 let timer = null;
 $('kw').addEventListener('input', e => {
   state.keyword = e.target.value;
@@ -389,34 +1201,201 @@ $('filters').addEventListener('click', e => {
     load();
   }
 });
+
+/* 卡片：点赞 / 左边主页按钮 / 其余区域进主页 */
 $('grid').addEventListener('click', e => {
   const like = e.target.closest('[data-like]');
-  if (like) { toggleLike(like.dataset.like); return; }
-  const open = e.target.closest('[data-name],[data-avatar]');
-  if (open) openModal(open.dataset.name || open.dataset.avatar);
+  if (like) { e.stopPropagation(); toggleLike(like.dataset.like); return; }
+  const open = e.target.closest('[data-open],[data-profile]');
+  if (open) openProfile(open.dataset.open || open.dataset.profile);
 });
+
 $('openPicks').addEventListener('click', () => { renderPicks(); $('mask').classList.add('show'); $('drawer').classList.add('show'); });
 $('closeDrawer').addEventListener('click', closeOverlays);
-$('mask').addEventListener('click', closeOverlays);
+$('openChats').addEventListener('click', openChatList);
+$('closeChatDrawer').addEventListener('click', closeOverlays);
+$('closeChatDrawer2').addEventListener('click', closeOverlays);
+$('mask').addEventListener('click', () => closeOverlays());
 $('pickList').addEventListener('click', e => {
   const rm = e.target.closest('[data-remove]');
-  if (!rm) return;
-  picks.delete(String(rm.dataset.remove)); savePicks(); renderPicks(); render();
+  if (rm) { picks.delete(String(rm.dataset.remove)); savePicks(); renderPicks(); render(); return; }
+  const open = e.target.closest('[data-open]');
+  if (open) { goProfileFromOverlay(open.dataset.open); }
 });
 $('clearPicks').addEventListener('click', () => { picks.clear(); savePicks(); renderPicks(); render(); });
-$('mLike').addEventListener('click', () => { if (state.detail) toggleLike(keyOf(state.detail)); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeOverlays(); });
 
-/* 跳转目标由后端配置驱动：/api/partner/site 提供 Google 外链，失败时用兜底值 */
-(async function init(){
-  savePicks();
+/* 私信列表点击进入对话 */
+$('chatList').addEventListener('click', e => {
+  const row = e.target.closest('[data-chat]');
+  if (!row) return;
+  closeOverlays();
+  setTimeout(() => openChat({ id: Number(row.dataset.chat), name: row.dataset.name, avatar: row.dataset.avatar || '' }), 0);
+});
+
+/* 主页内部事件（事件委托，内容会整体重绘） */
+$('profileContent').addEventListener('click', e => {
+  const copy = e.target.closest('[data-copy]');
+  if (copy) {
+    const v = copy.dataset.copy;
+    navigator.clipboard && navigator.clipboard.writeText(v).then(() => toast('已复制：' + v), () => toast(v));
+    return;
+  }
+  if (e.target.closest('#editContactBtn') || e.target.closest('#editContactBtn2')) { openContactSheet(); return; }
+  if (e.target.closest('#publishFromProfile')) { openPublish(); return; }
+  const chat = e.target.closest('[data-chat]');
+  if (chat) { openChat({ id: Number(chat.dataset.chat), name: chat.dataset.name, avatar: chat.dataset.avatar || '' }); return; }
+  const hanxin = e.target.closest('[data-hanxin]');
+  if (hanxin) { toggleLike(hanxin.dataset.hanxin); toast('已加入你的心动名单'); }
+});
+
+/* 作品网格点击 */
+$('worksGrid').addEventListener('click', e => {
+  const likeBtn = e.target.closest('[data-wlike]');
+  if (likeBtn) { e.stopPropagation(); toggleWorkLike(likeBtn.dataset.wlike); return; }
+  const card = e.target.closest('[data-work]');
+  if (card) openWorkDetail(card.dataset.work);
+});
+
+/* 作品详情弹层：缩略图切换 / 点赞 / 删除 / BGM */
+$('detailModal').addEventListener('click', e => {
+  if (e.target.closest('#closeDetail')) { closeOverlays(); return; }
+  const th = e.target.closest('[data-idx]');
+  if (th) { state.detailIndex = Number(th.dataset.idx); renderWorkDetail(); return; }
+  const wl = e.target.closest('[data-wlike]');
+  if (wl) { toggleWorkLike(wl.dataset.wlike); return; }
+  const del = e.target.closest('[data-delwork]');
+  if (del) { deleteWork(del.dataset.delwork); return; }
+  const bgmBtn = e.target.closest('[data-bgm-toggle]');
+  if (bgmBtn) { toggleBgm(bgmBtn.dataset.bgm, bgmBtn); return; }
+  const author = e.target.closest('[data-open]');
+  if (author && author.dataset.closeDetail) {
+    goProfileFromOverlay(author.dataset.open);
+  }
+});
+
+function toggleBgm(url, btn) {
+  if (!url) return;
+  if (!bgmAudio.paused && bgmAudio.dataset.url === url) {
+    stopBgm();
+    return;
+  }
   try {
-    const res = await fetch('/api/partner/site');
+    if (bgmAudio.dataset.url !== url) {
+      bgmAudio.src = url;
+      bgmAudio.dataset.url = url;
+    }
+    bgmAudio.play().then(() => {
+      document.querySelectorAll('[data-bgm-toggle]').forEach(b => b.textContent = '暂停');
+      const disc = document.querySelector('.bgm-bar .disc');
+      if (disc) disc.classList.add('spin');
+      if (btn) btn.textContent = '暂停';
+    }).catch(() => {
+      toast('这段 BGM 无法播放（可能是直链失效或跨域限制）');
+    });
+  } catch (e) { toast('BGM 播放失败'); }
+}
+
+/* 发布弹层 */
+$('publishSheet').addEventListener('click', e => {
+  if (e.target.closest('#closePublish') || e.target.closest('#cancelPublish')) { closeOverlays(); return; }
+  const rmImg = e.target.closest('[data-rmimg]');
+  if (rmImg) { pub.images.splice(Number(rmImg.dataset.rmimg), 1); renderPublishSheet(); return; }
+  if (e.target.closest('[data-rmvideo]')) {
+    pub.video = null; pub.videoName = ''; renderPublishSheet(); return;
+  }
+  const preset = e.target.closest('[data-bgm-preset]');
+  if (preset) {
+    const [url, name] = preset.dataset.bgmPreset.split('|');
+    $('pubBgm').value = url;
+    if (!$('pubBgmName').value) $('pubBgmName').value = name;
+    return;
+  }
+  if (e.target.closest('#submitPublish')) submitPublish();
+});
+
+/* 文件选择（change 事件不冒泡，用捕获阶段绑定） */
+$('publishSheet').addEventListener('change', async e => {
+  const t = e.target;
+  if (t.id === 'fileImg' && t.files && t.files.length) {
+    const files = Array.from(t.files).slice(0, 9 - pub.images.length);
+    for (const f of files) {
+      if (f.size > 10 * 1024 * 1024) { toast(f.name + ' 超过 10MB，已跳过'); continue; }
+      toast('正在上传 ' + f.name + '…');
+      const r = await uploadFile(f, 'image');
+      if (r.ok) pub.images.push(r.url); else toast(r.message || '上传失败');
+    }
+    renderPublishSheet();
+  }
+  if (t.id === 'fileVideo' && t.files && t.files.length) {
+    const f = t.files[0];
+    if (f.size > 120 * 1024 * 1024) { toast('视频超过 120MB，请压缩后再上传'); return; }
+    toast('视频上传中，请稍候…');
+    const r = await uploadFile(f, 'video');
+    if (r.ok) { pub.video = r.url; pub.videoName = f.name; renderPublishSheet(); toast('视频已上传'); }
+    else toast(r.message || '视频上传失败');
+  }
+}, true);
+
+/* 联系方式弹层 */
+$('contactSheet').addEventListener('click', e => {
+  if (e.target.closest('#closeContact') || e.target.closest('#cancelContact')) { closeOverlays(); return; }
+  if (e.target.closest('#saveContact')) saveContact();
+});
+
+$('backHome').addEventListener('click', closeProfile);
+$('openPublish').addEventListener('click', () => {
+  if (!loggedIn()) { toast('请先回主站登录，再来发布作品'); return; }
+  // 顶栏「发布作品」：总是发到自己的主页；若当前停在别人主页则先切回自己
+  const me = state.auth.id;
+  if (state.profileUserId && String(state.profileUserId) === String(me)) {
+    openPublish();
+    return;
+  }
+  openProfile(me).then(() => {
+    if (state.profile && state.profile.mine) openPublish();
+  });
+});
+
+function outerAuthId() { return state.auth ? state.auth.id : null; }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if ($('profilePage').classList.contains('show')) { closeProfile(); return; }
+    closeOverlays();
+  }
+});
+
+/* ---------------- 初始化 ---------------- */
+(async function init() {
+  // 先记住 URL 里的 viewer（来自主站「我的主页」入口），absorbAuthFromUrl 会清理地址栏参数
+  const viewerParam = new URLSearchParams(location.search).get('viewer');
+  const fromHome = absorbAuthFromUrl();
+  loadAuth();
+  renderLoginTip();
+  $('loginLink').href = buildLoginLink();
+  savePicks();
+
+  try {
+    const res = await fetch(API + '/api/partner/site');
     const json = await res.json();
     const url = json && json.data && json.data.googleUrl;
     if (url) { $('googleLink').href = url; $('googleFoot').href = url; }
   } catch (e) { /* 后端不可用时保留默认 Google 搜索地址 */ }
+
   load();
+  refreshUnread();
+
+  // 指定了 viewer（或从主站带着登录态进来）：直接落到对应主页
+  if (viewerParam) {
+    openProfile(viewerParam);
+  } else if (fromHome && !state.auth) {
+    toast('主站登录态已过期，可以浏览，但发布/点赞需要重新登录');
+  }
+
+  // 每 60 秒刷新一次未读数（有登录态且没在聊天时）
+  setInterval(() => {
+    if (loggedIn() && !$('chatPanel').classList.contains('show')) refreshUnread();
+  }, 60000);
 })();
 </script>
 </body>

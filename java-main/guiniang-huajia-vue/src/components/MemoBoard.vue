@@ -9,7 +9,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['back', 'needLogin'])
 
-const API_BASE = 'http://192.168.119.42:8081'
+const API_BASE = 'http://192.168.68.22:8081'
 const MEMO_API = API_BASE + '/api/profile/memos'
 const token = computed(() => (props.user && props.user.token) || '')
 

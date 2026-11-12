@@ -13,7 +13,7 @@ const props = defineProps({
 const emit = defineEmits(['logout', 'goAdmin', 'goProfile', 'goMemo'])
 
 // ---------- 接口地址 ----------
-const API_BASE = 'http://192.168.119.42:8081'
+const API_BASE = 'http://192.168.68.22:8081'
 const SEARCH_API = API_BASE + '/api/search'
 const HOME_API = API_BASE + '/api/home'
 const ITEMS_API = API_BASE + '/api/items'
@@ -24,7 +24,7 @@ const FAV_API = API_BASE + '/api/profile/favorites'
 // 后端在线时读 /api/partner/site 覆盖，后端未起则用兜底地址，入口始终可点。
 const partnerSite = ref({
   name: '姻缘阁 · 寻缘',
-  url: 'http://192.168.119.42:8081/dating.html',
+  url: 'http://192.168.68.22:8081/dating.html',
   enabled: true
 })
 
@@ -51,11 +51,60 @@ function openPartnerSite() {
   try {
     const u = new URL(href, window.location.href)
     u.searchParams.set('from', 'home')
+    // 姻缘阁由后端(8081)托管，与本前端(5173)不同源，读不到这里的 localStorage。
+    // 因此把登录态（含 token）随链接带过去，姻缘阁收到后存进自己域下，
+    // 之后发布作品 / 点赞 / 私信就能以当前用户身份进行。
+    // 注意打开方式必须去掉 noopener，否则该参数仍能传过去但无法用 window 通信；
+    // 这里仅传参，不依赖反向通信，故保留 noreferrer 以防 Referer 泄露 token。
+    const auth = currentAuth()
+    if (auth && auth.token) {
+      u.searchParams.set('token', auth.token)
+      u.searchParams.set('uid', String(auth.id))
+      if (auth.nickname) u.searchParams.set('name', auth.nickname)
+      if (auth.avatar) u.searchParams.set('avatar', auth.avatar)
+    }
     href = u.toString()
   } catch (e) { /* 非标准地址时保持原样 */ }
   const win = window.open(href, '_blank', 'noopener,noreferrer')
   if (!win) window.location.href = href  // 弹窗被拦截时降级为当前页跳转
   else flashToast(`已为你打开「${partnerSite.value.name}」♥`)
+}
+
+/** 读取当前登录态：本地/会话存储里的 guiniang_user（登录成功后写入，含 token） */
+function currentAuth() {
+  try {
+    const raw = window.localStorage.getItem('guiniang_user')
+      || window.sessionStorage.getItem('guiniang_user')
+    if (!raw) return null
+    const u = JSON.parse(raw)
+    return u && u.token ? u : null
+  } catch (e) {
+    return null
+  }
+}
+
+/**
+ * 打开姻缘阁里的「我的主页」：带上 viewer=uid 让页面直接定位到本人，
+ * 这样即便从首页进来也能立刻发布作品、查看/回复私信。
+ */
+function openMyPartnerProfile() {
+  if (!partnerSite.value.enabled) { flashToast('姻缘阁暂未开放～'); return }
+  const auth = currentAuth()
+  if (!auth) { flashToast('请先登录，再查看我的主页'); return }
+  let href = partnerSite.value.url
+  try {
+    const u = new URL(href, window.location.href)
+    u.searchParams.set('from', 'home')
+    u.searchParams.set('viewer', String(auth.id))
+    u.searchParams.set('token', auth.token)
+    u.searchParams.set('uid', String(auth.id))
+    if (auth.nickname) u.searchParams.set('name', auth.nickname)
+    if (auth.avatar) u.searchParams.set('avatar', auth.avatar)
+    href = u.toString()
+  } catch (e) { /* 地址异常时保持原样 */ }
+  const win = window.open(href, '_blank', 'noopener,noreferrer')
+  if (!win) window.location.href = href
+  else flashToast('已打开你的姻缘阁主页 ♥')
 }
 
 // ---------- 导航栏 ----------
@@ -481,6 +530,17 @@ function openMyGames() {
         @click="openPartnerSite"
       >
         <span class="partner-ico">↗</span> {{ partnerSite.name }}
+      </button>
+
+      <!-- 我的主页：直接打开姻缘阁里「自己」的嘉宾主页，可上传作品、配 BGM、看私信 -->
+      <button
+        v-if="partnerSite.enabled && (props.user && props.user.id)"
+        class="nav-partner"
+        type="button"
+        title="前往我在姻缘阁的主页（发布作品、配 BGM、收发私信）"
+        @click="openMyPartnerProfile"
+      >
+        <span class="partner-ico">🎬</span> 我的主页
       </button>
 
       <!-- 备忘录入口：需登录，未登录时由 App.vue 引导去登录页 -->

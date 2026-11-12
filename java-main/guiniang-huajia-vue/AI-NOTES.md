@@ -4,12 +4,12 @@
 
 ## 项目概况
 - Vite 6 + Vue 3（仅 vue 一个运行时依赖，安装很快），`<script setup>` 组合式 API
-- dev server: `http://192.168.119.42:5173`（见 vite.config.js）
+- dev server: `http://192.168.68.22:5173`（见 vite.config.js）
 - 页面组件在 `src/components/`；**后台统一请求层在 `src/utils/adminApi.js`**
 - 当前版本路径：`C:\Users\user\IdeaProjects\java\java-main\guiniang-huajia-vue`
 
 ## 与后端的对接
-- **直连**（无代理）：`http://192.168.119.42:8081`
+- **直连**（无代理）：`http://192.168.68.22:8081`
 - 后台已配 CORS；**必须先启动后端**（`../springBootTest/start-backend.bat`）
 - 前台接口 `/api/user/login`、`/api/user/register`、`/api/home`、`/api/search` 公开；`/api/profile/**` 带用户 JWT
 - **后台所有接口都带管理员 JWT**，由 `src/utils/adminApi.js` 统一注入
@@ -55,7 +55,7 @@
 
 ## 验证
 ```bash
-curl -s -o /dev/null -w "%{http_code}" http://192.168.119.42:5173/   # 应为 200
+curl -s -o /dev/null -w "%{http_code}" http://192.168.68.22:5173/   # 应为 200
 ```
 2026-11-04：`vite build` 通过（35 个模块）。
 
@@ -139,3 +139,26 @@ src/components/MyGames.vue   ← 外壳：列表 / 详情 / 开玩 三段状态�
 2. 在 `MyGames.vue` 的 `GAMES` 加一项（`id` 唯一、字段齐全），在 `PLAY` 里登记组件。
 3. 品类若为新类，需同步 `CATS` 标签数组。
 4. 有存档就沿用 `guiniang_` 前缀命名。
+
+## 姻缘阁「我的主页」入口（2026-11-12 新增）
+
+姻缘阁（`springBootTest/src/main/resources/static/dating.html`，端口 8081）新增了作品集 / 点赞 / 私信 / 联系方式，
+但它是**后端静态页，与 Vue 站点（5173）不同源**，读不到主站的 `localStorage`。所以登录态靠 URL 参数传递。
+
+### `components/HomePage.vue` 改动点
+- 新增 `currentAuth()`：从 `localStorage` / `sessionStorage` 读 `guiniang_user`，拿到 `{ id, token, nickname, avatar }`。
+  **token 字段名必须和登录页写入的一致**，改登录逻辑时记得同步这里。
+- `openPartnerSite()`：打开姻缘阁时在 URL 上追加 `token/uid/name/avatar`，页脚 `from=home` 保留。
+- 新增 `openMyPartnerProfile()`：追加 `viewer=<我的id>`，落地后 `dating.html` 会自动打开「我的主页」。
+- 导航栏新增按钮 **「🎬 我的主页」**（`v-if="partnerSite.enabled && props.user && props.user.id"`），
+  只有登录态下才出现，点击直达自己的作品集页。
+
+### 传参约定（dating.html 侧 `absorbAuthFromUrl()`）
+```
+?from=home&viewer=<uid>&token=<jwt>&uid=<uid>&name=<昵称>&avatar=<头像URL>
+```
+- `dating.html` 收到后写入自己域下的 `localStorage['dating_auth_v1']`，
+  再用 `history.replaceState` 把 `token/uid/name/avatar` 从地址栏抹掉（避免 token 出现在截图/分享链接里）。
+- 昵称和头像可能含中文/特殊字符，拼 URL 时必须 `encodeURIComponent`。
+- token 24 小时过期；过期后姻缘阁会提示「主站登录态已过期」，点「去登录」跳回 5173 登录页。
+- 跨源只能靠 URL 传，**不要**试图用 cookie（8081 与 5173 不同端口，SameSite/域名都不对）。

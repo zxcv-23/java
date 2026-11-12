@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 
 // 后端连通性探测：启动后请求 /api/home，失败则在页面顶部挂出横幅提示
-const API_BASE = 'http://192.168.119.42:8081'
+const API_BASE = 'http://192.168.68.22:8081'
 const down = ref(false)
 const dismissed = ref(false)
 

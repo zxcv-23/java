@@ -9,7 +9,7 @@ import org.springframework.web.filter.CorsFilter;
 import java.util.List;
 
 /**
- * 跨域配置：允许前端 Vite 开发服务器（默认 192.168.119.42:5173）调用本后端接口
+ * 跨域配置：允许前端 Vite 开发服务器（默认 192.168.68.22:5173）调用本后端接口
  */
 @Configuration
 public class CorsConfig {
@@ -19,7 +19,7 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
         // 允许前端开发/预览地址；生产可改为具体域名
         config.setAllowedOriginPatterns(List.of(
-                "http://192.168.119.42:5173",
+                "http://192.168.68.22:5173",
                 "http://localhost:5173"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));

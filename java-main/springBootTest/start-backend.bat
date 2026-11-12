@@ -98,7 +98,7 @@ if errorlevel 1 goto :BUILDFAIL
 if not exist "target\springBootTest-0.0.1-SNAPSHOT.jar" goto :BUILDFAIL
 
 :RUN
-echo [启动] 后端服务: http://192.168.119.42:8081  (关闭本窗口或按 Ctrl+C 即停止)
+echo [启动] 后端服务: http://192.168.68.22:8081  (关闭本窗口或按 Ctrl+C 即停止)
 "%JAVACMD%" -jar "target\springBootTest-0.0.1-SNAPSHOT.jar" --server.port=8081
 echo [退出] 后端已停止。
 pause

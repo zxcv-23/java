@@ -56,6 +56,94 @@ public class SchemaMigration implements ApplicationRunner {
                 "ALTER TABLE `admin` ADD COLUMN `token_version` BIGINT NOT NULL DEFAULT 0 COMMENT '令牌版本'");
 
         ensureFavoriteTable();
+
+        // 姻缘阁作品集：作品 / 媒体 / 点赞 / 私信 / 联系方式
+        ensureDatingTables();
+    }
+
+    /**
+     * 姻缘阁作品集相关表。
+     *
+     * <p>全部用 {@code CREATE TABLE IF NOT EXISTS}，天然幂等：旧库启动自动补表，
+     * 已有数据一行不动。不建外键，避免与既有表结构互相牵制。</p>
+     */
+    private void ensureDatingTables() {
+        String[] ddls = {
+                // 作品主表：like_count / comment_count / view_count 为冗余统计，列表页不必 count 子表
+                "CREATE TABLE IF NOT EXISTS `dating_work` (" +
+                        "`id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID'," +
+                        "`user_id` BIGINT NOT NULL COMMENT '作者用户ID'," +
+                        "`title` VARCHAR(80) NOT NULL COMMENT '作品标题'," +
+                        "`content` VARCHAR(1000) DEFAULT NULL COMMENT '作品文案'," +
+                        "`cover` VARCHAR(255) DEFAULT NULL COMMENT '封面地址'," +
+                        "`bgm_url` VARCHAR(500) DEFAULT NULL COMMENT 'BGM地址'," +
+                        "`bgm_name` VARCHAR(100) DEFAULT NULL COMMENT 'BGM名称'," +
+                        "`like_count` INT NOT NULL DEFAULT 0 COMMENT '点赞数'," +
+                        "`comment_count` INT NOT NULL DEFAULT 0 COMMENT '留言数'," +
+                        "`view_count` INT NOT NULL DEFAULT 0 COMMENT '浏览数'," +
+                        "`visible` TINYINT NOT NULL DEFAULT 1 COMMENT '1公开 0仅自己可见'," +
+                        "`create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP," +
+                        "`update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
+                        "PRIMARY KEY (`id`)," +
+                        "KEY `idx_dating_work_user` (`user_id`,`id`)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='姻缘阁作品'",
+
+                // 作品媒体：一条作品多张照片 / 一个视频，sort_order 保证展示顺序
+                "CREATE TABLE IF NOT EXISTS `dating_work_media` (" +
+                        "`id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID'," +
+                        "`work_id` BIGINT NOT NULL COMMENT '作品ID'," +
+                        "`media_type` VARCHAR(16) NOT NULL DEFAULT 'image' COMMENT 'image/video'," +
+                        "`url` VARCHAR(500) NOT NULL COMMENT '访问地址'," +
+                        "`sort_order` INT NOT NULL DEFAULT 0 COMMENT '顺序'," +
+                        "PRIMARY KEY (`id`)," +
+                        "KEY `idx_dating_media_work` (`work_id`,`sort_order`)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='姻缘阁作品媒体'",
+
+                // 点赞：唯一索引保证「一人一作品只赞一次」，重复点赞幂等
+                "CREATE TABLE IF NOT EXISTS `dating_like` (" +
+                        "`id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID'," +
+                        "`work_id` BIGINT NOT NULL COMMENT '作品ID'," +
+                        "`user_id` BIGINT NOT NULL COMMENT '点赞用户ID'," +
+                        "`create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP," +
+                        "PRIMARY KEY (`id`)," +
+                        "UNIQUE KEY `uk_dating_like` (`work_id`,`user_id`)," +
+                        "KEY `idx_dating_like_user` (`user_id`)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='作品点赞'",
+
+                // 私信：会话不建表，按 least/greatest 归组；双索引分别支撑「我收的」和「我发的」
+                "CREATE TABLE IF NOT EXISTS `dating_message` (" +
+                        "`id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID'," +
+                        "`from_user_id` BIGINT NOT NULL COMMENT '发送者'," +
+                        "`to_user_id` BIGINT NOT NULL COMMENT '接收者'," +
+                        "`content` VARCHAR(1000) NOT NULL COMMENT '正文'," +
+                        "`is_read` TINYINT NOT NULL DEFAULT 0 COMMENT '1已读 0未读'," +
+                        "`create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP," +
+                        "PRIMARY KEY (`id`)," +
+                        "KEY `idx_dating_msg_to` (`to_user_id`,`from_user_id`,`id`)," +
+                        "KEY `idx_dating_msg_from` (`from_user_id`,`to_user_id`,`id`)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='站内私信'",
+
+                // 联系方式：与 user.phone 分离，visible 控制可见范围
+                "CREATE TABLE IF NOT EXISTS `dating_contact` (" +
+                        "`id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID'," +
+                        "`user_id` BIGINT NOT NULL COMMENT '用户ID'," +
+                        "`wechat` VARCHAR(60) DEFAULT NULL COMMENT '微信号'," +
+                        "`qq` VARCHAR(30) DEFAULT NULL COMMENT 'QQ号'," +
+                        "`phone` VARCHAR(30) DEFAULT NULL COMMENT '交友手机号'," +
+                        "`other` VARCHAR(120) DEFAULT NULL COMMENT '其他联系方式'," +
+                        "`visible` TINYINT NOT NULL DEFAULT 0 COMMENT '0仅私信过来往的人可见 1所有登录用户可见'," +
+                        "`update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
+                        "PRIMARY KEY (`id`)," +
+                        "UNIQUE KEY `uk_dating_contact_user` (`user_id`)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='姻缘阁联系方式'"
+        };
+        for (String ddl : ddls) {
+            try {
+                jdbc.execute(ddl);
+            } catch (Exception e) {
+                log.warn("数据库迁移：创建姻缘阁表失败（不阻断启动）：{}", e.getMessage());
+            }
+        }
     }
 
     /** 列不存在才执行 ALTER；已存在直接跳过 */

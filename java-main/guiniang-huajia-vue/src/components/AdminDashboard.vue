@@ -9,7 +9,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['logout', 'back'])
 
-const API_BASE = 'http://192.168.119.42:8081'
+const API_BASE = 'http://192.168.68.22:8081'
 
 // 注：姻缘阁（相亲展示页）跳转入口已迁至首页 HomePage.vue，后台不再重复放置。
 // 目标地址仍由后端 application-dev.properties 的 partner.site.* 统一驱动。

@@ -14,10 +14,13 @@ import java.io.IOException;
 import java.util.Map;
 
 /**
- * JWT 拦截器：校验请求头 Authorization: Bearer <token>，
+ * JWT 拦截器（严格版）：校验请求头 Authorization: Bearer <token>，
  * 并比对 token 中的令牌版本号与数据库中当前版本号（不一致说明已改密/登出，token 作废）。
  * 校验通过后把用户ID写入 request 属性 authUserId，供 Controller 使用；
  * 校验失败直接返回 401（JSON），不进入 Controller。
+ *
+ * <p>用于需要登录的写操作（个人中心、发布作品、点赞、私信等）。
+ * 姻缘阁里对游客开放的浏览接口请用 {@link OptionalJwtInterceptor}。</p>
  */
 @Component
 public class JwtInterceptor implements HandlerInterceptor {
