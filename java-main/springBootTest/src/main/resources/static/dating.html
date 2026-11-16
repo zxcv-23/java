@@ -259,6 +259,44 @@
   .btn-ok{border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:999px;padding:10px 24px;font-size:13px;font-weight:600}
   .btn-ok:disabled{opacity:.5;cursor:not-allowed}
 
+  /* ---------- 视图切换（找有缘人 / 作品广场） ---------- */
+  .view-tabs{display:flex;justify-content:center;gap:10px;margin:24px auto 0}
+  .view-tab{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 22px;
+    font-size:14px;color:var(--muted);transition:.18s;font-weight:600}
+  .view-tab:hover{background:var(--soft);color:var(--ink)}
+  .view-tab.active{background:var(--ink);border-color:var(--ink);color:#fff}
+
+  /* 作品广场卡片补充 */
+  .work .w-author{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-bottom:4px}
+  .work .w-author .dot{width:18px;height:18px;border-radius:50%;overflow:hidden;position:relative;flex:none;
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;
+    background:linear-gradient(135deg,#f6a5b6,#e0455f)}
+  .work .w-author .dot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+
+  /* ---------- 发布弹层 · 配乐选择器 ---------- */
+  .bgm-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .bgm-tab{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 14px;
+    font-size:12px;color:var(--muted);transition:.15s}
+  .bgm-tab:hover{background:var(--soft);color:var(--ink)}
+  .bgm-tab.active{background:var(--rose-soft);border-color:#f3c9d1;color:var(--rose);font-weight:600}
+  .bgm-lib{display:flex;flex-direction:column;gap:6px;max-height:196px;overflow:auto;
+    border:1px solid var(--line);border-radius:12px;padding:8px}
+  .bgm-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;
+    cursor:pointer;border:1px solid transparent;font-size:13px}
+  .bgm-item:hover{background:var(--soft)}
+  .bgm-item.on{border-color:#f3c9d1;background:var(--rose-soft)}
+  .bgm-item .mi-play{border:1px solid var(--line);background:#fff;border-radius:999px;
+    padding:3px 11px;font-size:11px;color:var(--muted);flex:none}
+  .bgm-item .mi-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bgm-item .mi-mood{font-size:11px;color:var(--muted);flex:none}
+  .bgm-picked{display:flex;align-items:center;gap:10px;margin-top:10px;border:1px solid #f3c9d1;
+    background:var(--rose-soft);border-radius:12px;padding:9px 12px;font-size:13px}
+  .bgm-picked .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--rose);font-weight:600}
+  .bgm-picked button{border:1px solid #f3c9d1;background:#fff;border-radius:999px;padding:3px 11px;font-size:11px;color:var(--rose)}
+  .bgm-up-btn{display:inline-flex;align-items:center;gap:8px;border:1px dashed #c8ccd2;border-radius:12px;
+    padding:14px 18px;color:var(--muted);font-size:13px;cursor:pointer;background:var(--soft)}
+  .bgm-up-btn:hover{border-color:var(--rose);color:var(--rose)}
+
   /* ---------- 私信面板 ---------- */
   .chat-panel{position:fixed;right:24px;bottom:0;width:min(380px,94vw);height:min(560px,82vh);background:#fff;
     border-radius:16px 16px 0 0;box-shadow:var(--shadow-lg);z-index:23;display:flex;flex-direction:column;
@@ -341,6 +379,10 @@
     <button class="chip" data-gender="2">姑娘</button>
     <button class="chip picked" id="pickedChip">只看已心动</button>
   </div>
+  <div class="view-tabs" id="viewTabs">
+    <button class="view-tab active" data-view="people">♥ 找有缘人</button>
+    <button class="view-tab" data-view="square">🎵 作品广场</button>
+  </div>
 </section>
 
 <main>
@@ -349,16 +391,30 @@
     <a id="loginLink" href="http://192.168.68.22:5173/" target="_blank" rel="noopener noreferrer">去登录 →</a>
   </div>
   <div class="notice" id="notice"></div>
-  <div class="result-bar">
-    <div>为你找到 <b id="total">0</b> 位有缘人</div>
-    <span class="src-tag" id="srcTag">正在读取姻缘簿…</span>
+  <div id="peopleView">
+    <div class="result-bar">
+      <div>为你找到 <b id="total">0</b> 位有缘人</div>
+      <span class="src-tag" id="srcTag">正在读取姻缘簿…</span>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="empty" style="display:none">
+      <div class="ico">🪷</div>
+      <h3>还没有中意的人</h3>
+      <p>换个关键词或筛选条件试试，也可以先去本站注册，让自己出现在姻缘簿上。</p>
+      <a href="http://192.168.68.22:5173/" target="_blank" rel="noopener noreferrer">去注册 · 入姻缘簿</a>
+    </div>
   </div>
-  <div class="grid" id="grid"></div>
-  <div class="empty" id="empty" style="display:none">
-    <div class="ico">🪷</div>
-    <h3>还没有中意的人</h3>
-    <p>换个关键词或筛选条件试试，也可以先去本站注册，让自己出现在姻缘簿上。</p>
-    <a href="http://192.168.68.22:5173/" target="_blank" rel="noopener noreferrer">去注册 · 入姻缘簿</a>
+  <div id="squareView" style="display:none">
+    <div class="result-bar">
+      <div>全站公开作品 <b id="squareTotal">0</b> 件 · 所有人可见</div>
+      <span class="src-tag">作品广场 · 按最新发布排序</span>
+    </div>
+    <div class="works-grid" id="squareGrid"></div>
+    <div class="empty" id="squareEmpty" style="display:none">
+      <div class="ico">🎵</div>
+      <h3>广场上还没有作品</h3>
+      <p>发布第一件作品，让所有人都看到你的生活与音乐吧。</p>
+    </div>
   </div>
 </main>
 
@@ -445,7 +501,10 @@ const state = {
   detailIndex: 0,
   chatPeer: null,      // 正在聊天的对方 {id, name, avatar}
   publishing: false,
-  contactLoaded: false
+  contactLoaded: false,
+  view: 'people',      // people | square（作品广场）
+  feed: [],            // 作品广场的作品列表
+  bgmLib: null         // 内置曲库（首次打开发布弹层时拉取）
 };
 
 let picks = new Set();
@@ -653,6 +712,69 @@ function toggleLike(id) {
   renderPicks();
 }
 
+/* =========================================================
+ * 作品广场（全站公开作品，所有人可见）
+ * ========================================================= */
+function switchView(view) {
+  state.view = view;
+  document.querySelectorAll('#viewTabs .view-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.view === view));
+  $('peopleView').style.display = view === 'people' ? '' : 'none';
+  $('squareView').style.display = view === 'square' ? '' : 'none';
+  if (view === 'square') loadFeed();
+}
+
+async function loadFeed() {
+  $('squareGrid').innerHTML = '<div class="empty" style="grid-column:1/-1;padding:40px 0"><p>正在翻开作品广场…</p></div>';
+  const r = await api('/api/dating/works?limit=60');
+  if (!r.ok) {
+    $('squareGrid').innerHTML = '<div class="empty" style="grid-column:1/-1;padding:40px 0"><div class="ico">⚠️</div><p>' + esc(r.message || '读取失败') + '</p></div>';
+    $('squareTotal').textContent = '0';
+    $('squareEmpty').style.display = 'none';
+    return;
+  }
+  state.feed = r.data || [];
+  renderSquare();
+}
+
+function renderSquare() {
+  const list = state.feed || [];
+  $('squareTotal').textContent = list.length;
+  $('squareEmpty').style.display = list.length ? 'none' : 'block';
+  $('squareGrid').innerHTML = list.map((w, i) => squareWorkCardHtml(w, i)).join('');
+}
+
+function squareWorkCardHtml(w, i) {
+  const first = (w.media || [])[0];
+  let thumb = '';
+  if (first) {
+    thumb = isVideo(first)
+      ? '<video src="' + esc(first.url) + '" muted playsinline preload="metadata"></video>'
+      : '<img src="' + esc(first.url) + '" alt="" loading="lazy">';
+  } else if (w.cover) {
+    thumb = '<img src="' + esc(w.cover) + '" alt="" loading="lazy">';
+  } else {
+    thumb = '<div class="ph">🖼</div>';
+  }
+  const videoCount = (w.media || []).filter(isVideo).length;
+  const authorDot = '<span class="dot">' + esc((w.authorName || '?').charAt(0))
+    + (w.authorAvatar ? '<img src="' + esc(w.authorAvatar) + '" alt="">' : '') + '</span>';
+  return '<article class="work" data-fwork="' + i + '">'
+    + '<div class="thumb">' + thumb
+    +   (w.bgmUrl ? '<span class="tag-bgm">♪ ' + esc(w.bgmName || '配乐') + '</span>' : '')
+    +   (videoCount ? '<span class="tag-play">▶ 视频</span>' : '')
+    + '</div>'
+    + '<div class="w-body">'
+    +   '<div class="w-author">' + authorDot + '<span>' + esc(w.authorName || '有缘人') + '</span></div>'
+    +   '<p class="w-title">' + esc(w.title) + '</p>'
+    +   '<div class="w-meta">'
+    +     '<span>' + esc((w.createdAt || '').slice(0, 10)) + '</span>'
+    +     '<button class="w-like ' + (w.liked ? 'on' : '') + '" data-wlike="' + w.id + '">'
+    +       (w.liked ? '♥' : '♡') + ' ' + (w.likeCount || 0) + '</button>'
+    +   '</div>'
+    + '</div></article>';
+}
+
 /* ---------------- 心动抽屉 ---------------- */
 function renderPicks() {
   const chosen = state.list.filter(c => picks.has(keyOf(c)));
@@ -824,6 +946,23 @@ function stopBgm() {
   try { bgmAudio.pause(); bgmAudio.currentTime = 0; } catch (e) {}
   document.querySelectorAll('.bgm-bar .disc').forEach(d => d.classList.remove('spin'));
   document.querySelectorAll('[data-bgm-toggle]').forEach(b => b.textContent = '播放');
+  document.querySelectorAll('[data-bgm-preview]').forEach(b => b.textContent = '试听');
+}
+
+/** 发布弹层里的音乐试听（与详情页共用同一个 Audio 实例，互不抢声） */
+function previewBgm(url, btn) {
+  if (!url) return;
+  if (!bgmAudio.paused && bgmAudio.dataset.url === url) { stopBgm(); return; }
+  stopBgm();
+  try {
+    bgmAudio.src = url;
+    bgmAudio.dataset.url = url;
+    bgmAudio.play().then(() => {
+      if (btn) btn.textContent = '停止';
+    }).catch(() => {
+      toast('这段音乐无法播放（可能是直链失效或跨域限制）');
+    });
+  } catch (e) { toast('音乐播放失败'); }
 }
 
 function openWorkDetail(workOrId) {
@@ -902,6 +1041,12 @@ async function toggleWorkLike(workId) {
     const w = state.profile.works.find(x => String(x.id) === String(workId));
     if (w) { w.liked = liked; w.likeCount = count; }
   }
+  // 广场里的同一件作品也要同步
+  const fw = (state.feed || []).find(x => String(x.id) === String(workId));
+  if (fw) {
+    fw.liked = liked; fw.likeCount = count;
+    if (state.view === 'square' && !$('detailModal').classList.contains('show')) renderSquare();
+  }
   if (state.profile && state.profileUserId) renderProfile();
   if (state.worksPreview && String(state.worksPreview.id) === String(workId)) {
     state.worksPreview.liked = liked;
@@ -925,7 +1070,32 @@ async function deleteWork(workId) {
 /* =========================================================
  * 发布作品
  * ========================================================= */
-const pub = { images: [], video: null, videoName: '' };
+const pub = { images: [], video: null, videoName: '', title: '', content: '', bgm: null, bgmTab: 'lib', linkUrl: '', linkName: '' };
+
+/** 发布弹层整体重绘前，先把正在编辑的标题/文案/直链收进状态，避免重绘丢失 */
+function snapshotPublishInputs() {
+  if (!$('publishSheet').classList.contains('show')) return;
+  const t = $('pubTitle'), c = $('pubContent');
+  if (t) pub.title = t.value;
+  if (c) pub.content = c.value;
+  const lu = $('bgmLinkUrl'), ln = $('bgmLinkName');
+  if (lu) pub.linkUrl = lu.value;
+  if (ln) pub.linkName = ln.value;
+}
+
+/** 首次打开发布弹层时拉取内置曲库 */
+function loadBgmLibrary() {
+  if (state.bgmLib !== null) return;
+  state.bgmLib = undefined; // 标记「加载中」，避免并发重复请求
+  api('/api/dating/bgm/library').then(r => {
+    state.bgmLib = r.ok ? (r.data || []) : [];
+    if (!r.ok) toast(r.message || '曲库读取失败，可改用上传音乐或直链');
+    if ($('publishSheet').classList.contains('show') && pub.bgmTab === 'lib') {
+      snapshotPublishInputs();
+      renderPublishSheet();
+    }
+  }).catch(() => { state.bgmLib = []; });
+}
 
 function openPublish() {
   if (!loggedIn()) { toast('请先回主站登录，再来发布作品'); return; }
@@ -935,12 +1105,16 @@ function openPublish() {
     return;
   }
   pub.images = []; pub.video = null; pub.videoName = '';
+  pub.title = ''; pub.content = '';
+  pub.bgm = null; pub.bgmTab = 'lib'; pub.linkUrl = ''; pub.linkName = '';
+  loadBgmLibrary();
   renderPublishSheet();
   $('mask').classList.add('show');
   $('publishSheet').classList.add('show');
 }
 
 function renderPublishSheet() {
+  snapshotPublishInputs();
   const maxImg = 9;
   let up = pub.images.map((u, i) =>
     '<div class="up-box"><img src="' + esc(u) + '" alt=""><span class="del" data-rmimg="' + i + '">×</span></div>').join('');
@@ -956,29 +1130,53 @@ function renderPublishSheet() {
     : '<label class="up-box" style="width:120px"><span class="plus">▶</span><span>视频（≤120MB）</span>'
       + '<input type="file" accept="video/*" hidden id="fileVideo"></label>';
 
+  // ---------- 配乐选择器 ----------
+  const bgmTab = pub.bgmTab;
+  const tabBtn = (key, label) =>
+    '<button type="button" class="bgm-tab' + (bgmTab === key ? ' active' : '') + '" data-mtab="' + key + '">' + label + '</button>';
+  let pane = '';
+  if (bgmTab === 'lib') {
+    if (!state.bgmLib) {
+      pane = '<div class="bgm-lib"><div style="padding:14px;color:var(--muted);font-size:12px">正在读取曲库…</div></div>';
+    } else if (!state.bgmLib.length) {
+      pane = '<div class="bgm-lib"><div style="padding:14px;color:var(--muted);font-size:12px">曲库暂不可用，可改用「上传音乐」或「音频直链」</div></div>';
+    } else {
+      pane = '<div class="bgm-lib">' + state.bgmLib.map(t => {
+        const on = pub.bgm && pub.bgm.url === t.url;
+        return '<div class="bgm-item' + (on ? ' on' : '') + '" data-bgm-pick="' + esc(t.url) + '|' + esc(t.name) + '">'
+          + '<button type="button" class="mi-play" data-bgm-preview="' + esc(t.url) + '">试听</button>'
+          + '<span class="mi-name">' + (on ? '♪ ' : '') + esc(t.name) + '</span>'
+          + '<span class="mi-mood">' + esc(t.mood || '') + '</span></div>';
+      }).join('') + '</div>';
+    }
+  } else if (bgmTab === 'upload') {
+    pane = '<label class="bgm-up-btn"><span style="font-size:18px">🎵</span><span>选择本地音乐文件（MP3 / M4A / OGG / WAV / FLAC，≤20MB）</span>'
+      + '<input type="file" accept="audio/*,.mp3,.m4a,.ogg,.wav,.flac,.aac" hidden id="fileBgm"></label>';
+  } else {
+    pane = '<input type="url" id="bgmLinkUrl" placeholder="https://.../music.mp3" value="' + esc(pub.linkUrl) + '">'
+      + '<input type="text" id="bgmLinkName" maxlength="100" placeholder="曲名（选填）" value="' + esc(pub.linkName) + '" style="margin-top:8px">';
+  }
+  const picked = (pub.bgm && bgmTab !== 'link')
+    ? '<div class="bgm-picked"><span>♪</span><span class="nm">' + esc(pub.bgm.name || '已选配乐') + '</span>'
+      + '<button type="button" data-bgm-preview="' + esc(pub.bgm.url) + '">试听</button>'
+      + '<button type="button" data-bgm-clear="1">移除</button></div>'
+    : '';
+
   $('publishSheet').innerHTML =
       '<button class="modal-close" id="closePublish">×</button>'
     + '<h3>发布作品</h3>'
-    + '<p class="sub">照片、视频与 BGM 会一起展示在你的主页作品集里；别人可以点赞、发私信找你。</p>'
+    + '<p class="sub">照片、视频与配乐会一起展示在你的主页作品集和「作品广场」里，所有人都能看到；别人可以点赞、发私信找你。</p>'
     + '<div class="field"><label>标题</label>'
-    +   '<input type="text" id="pubTitle" maxlength="80" placeholder="例如：周末的西湖与一杯拿铁"></div>'
+    +   '<input type="text" id="pubTitle" maxlength="80" value="' + esc(pub.title) + '" placeholder="例如：周末的西湖与一杯拿铁"></div>'
     + '<div class="field"><label>文案 <span class="opt">选填</span></label>'
-    +   '<textarea id="pubContent" maxlength="1000" placeholder="说说这件作品背后的故事…"></textarea></div>'
+    +   '<textarea id="pubContent" maxlength="1000" placeholder="说说这件作品背后的故事…">' + esc(pub.content) + '</textarea></div>'
     + '<div class="field"><label>照片 <span class="opt">最多 9 张，第一张作为封面</span></label>'
     +   '<div class="uploader">' + up + '</div></div>'
     + '<div class="field"><label>视频 <span class="opt">选填，最多 1 段</span></label>'
     +   '<div class="uploader">' + vid + '</div></div>'
-    + '<div class="field"><label>BGM <span class="opt">选填，填写可直接播放的音频直链</span></label>'
-    +   '<input type="url" id="pubBgm" placeholder="https://.../music.mp3">'
-    +   '<div style="font-size:12px;color:var(--muted);margin-top:6px">'
-    +     '也可以点下面的示例曲目快速填入（需能联网访问）：'
-    +     '<span style="display:inline-flex;gap:8px;margin-left:6px;flex-wrap:wrap">'
-    +       '<button class="btn-ghost" style="padding:3px 10px;font-size:12px" data-bgm-preset="https://music.163.com/song/media/outer/url?id=1901371647.mp3|晚风">晚风</button>'
-    +       '<button class="btn-ghost" style="padding:3px 10px;font-size:12px" data-bgm-preset="https://music.163.com/song/media/outer/url?id=1824020871.mp3|初见">初见</button>'
-    +     '</span>'
-    +   '</div></div>'
-    + '<div class="field"><label>BGM 名称 <span class="opt">选填</span></label>'
-    +   '<input type="text" id="pubBgmName" maxlength="100" placeholder="例如：晚风"></div>'
+    + '<div class="field"><label>配乐 <span class="opt">选填 · 给作品配一首自己的音乐</span></label>'
+    +   '<div class="bgm-tabs">' + tabBtn('lib', '内置曲库') + tabBtn('upload', '上传音乐') + tabBtn('link', '音频直链') + '</div>'
+    +   pane + picked + '</div>'
     + '<div class="sheet-foot">'
     +   '<button class="btn-cancel" id="cancelPublish">取消</button>'
     +   '<button class="btn-ok" id="submitPublish">发布</button>'
@@ -1010,6 +1208,20 @@ async function submitPublish() {
   if (!title) { toast('给作品起个标题吧'); $('pubTitle').focus(); return; }
   if (!pub.images.length && !pub.video) { toast('至少上传一张照片或一段视频'); return; }
 
+  // 配乐：直链标签页读输入框，其余用已选中的 pub.bgm
+  let bgmUrl = '', bgmName = '';
+  if (pub.bgmTab === 'link') {
+    bgmUrl = ($('bgmLinkUrl') ? $('bgmLinkUrl').value : pub.linkUrl || '').trim();
+    bgmName = ($('bgmLinkName') ? $('bgmLinkName').value : pub.linkName || '').trim();
+    if (bgmUrl && !/^https?:\/\//i.test(bgmUrl)) {
+      toast('音频直链需以 http(s):// 开头');
+      return;
+    }
+  } else if (pub.bgm) {
+    bgmUrl = pub.bgm.url;
+    bgmName = pub.bgm.name;
+  }
+
   const btn = $('submitPublish');
   btn.disabled = true; btn.textContent = '发布中…';
   const r = await api('/api/dating/me/works', {
@@ -1019,17 +1231,18 @@ async function submitPublish() {
       content: ($('pubContent').value || '').trim(),
       images: pub.images,
       videoUrl: pub.video || '',
-      bgmUrl: ($('pubBgm').value || '').trim(),
-      bgmName: ($('pubBgmName').value || '').trim()
+      bgmUrl,
+      bgmName
     }
   });
   btn.disabled = false; btn.textContent = '发布';
   if (!r.ok) { toast(r.message || '发布失败'); return; }
 
-  toast('作品已收入阁中 ♥');
+  toast('作品已收入阁中 ♥ 所有人都能在广场看到');
   closeOverlays();
-  // 刷新当前主页的作品集
+  // 刷新当前主页的作品集；广场数据一并刷新，所有人立刻可见
   if (state.profileUserId) openProfile(state.profileUserId);
+  loadFeed();
 }
 
 /* =========================================================
@@ -1210,6 +1423,23 @@ $('grid').addEventListener('click', e => {
   if (open) openProfile(open.dataset.open || open.dataset.profile);
 });
 
+/* 视图切换：找有缘人 / 作品广场 */
+$('viewTabs').addEventListener('click', e => {
+  const tab = e.target.closest('.view-tab');
+  if (tab) switchView(tab.dataset.view);
+});
+
+/* 广场作品：点赞 / 打开详情 */
+$('squareGrid').addEventListener('click', e => {
+  const likeBtn = e.target.closest('[data-wlike]');
+  if (likeBtn) { e.stopPropagation(); toggleWorkLike(likeBtn.dataset.wlike); return; }
+  const card = e.target.closest('[data-fwork]');
+  if (card) {
+    const w = (state.feed || [])[Number(card.dataset.fwork)];
+    if (w) openWorkDetail(w);
+  }
+});
+
 $('openPicks').addEventListener('click', () => { renderPicks(); $('mask').classList.add('show'); $('drawer').classList.add('show'); });
 $('closeDrawer').addEventListener('click', closeOverlays);
 $('openChats').addEventListener('click', openChatList);
@@ -1232,8 +1462,10 @@ $('chatList').addEventListener('click', e => {
   setTimeout(() => openChat({ id: Number(row.dataset.chat), name: row.dataset.name, avatar: row.dataset.avatar || '' }), 0);
 });
 
-/* 主页内部事件（事件委托，内容会整体重绘） */
-$('profileContent').addEventListener('click', e => {
+/* 主页内部事件（事件委托，内容会整体重绘）
+   注意：委托必须挂在 #profilePage 上 —— 顶栏的「我的联系方式」「发布作品」按钮渲染在
+   #profileOps 里，与 #profileContent 是兄弟节点，挂错容器会导致按钮点了没反应。 */
+$('profilePage').addEventListener('click', e => {
   const copy = e.target.closest('[data-copy]');
   if (copy) {
     const v = copy.dataset.copy;
@@ -1303,11 +1535,21 @@ $('publishSheet').addEventListener('click', e => {
   if (e.target.closest('[data-rmvideo]')) {
     pub.video = null; pub.videoName = ''; renderPublishSheet(); return;
   }
-  const preset = e.target.closest('[data-bgm-preset]');
-  if (preset) {
-    const [url, name] = preset.dataset.bgmPreset.split('|');
-    $('pubBgm').value = url;
-    if (!$('pubBgmName').value) $('pubBgmName').value = name;
+  // 试听按钮（在曲库条目内部时优先于条目选中）
+  const prev = e.target.closest('[data-bgm-preview]');
+  if (prev) { e.stopPropagation(); previewBgm(prev.dataset.bgmPreview, prev); return; }
+  // 移除已选配乐
+  if (e.target.closest('[data-bgm-clear]')) { pub.bgm = null; stopBgm(); renderPublishSheet(); return; }
+  // 切换配乐方式标签
+  const mtab = e.target.closest('[data-mtab]');
+  if (mtab) { stopBgm(); pub.bgmTab = mtab.dataset.mtab; renderPublishSheet(); return; }
+  // 从曲库选中一首
+  const pick = e.target.closest('[data-bgm-pick]');
+  if (pick) {
+    const parts = pick.dataset.bgmPick.split('|');
+    pub.bgm = { url: parts[0], name: parts[1] || '配乐' };
+    stopBgm();
+    renderPublishSheet();
     return;
   }
   if (e.target.closest('#submitPublish')) submitPublish();
@@ -1333,6 +1575,19 @@ $('publishSheet').addEventListener('change', async e => {
     const r = await uploadFile(f, 'video');
     if (r.ok) { pub.video = r.url; pub.videoName = f.name; renderPublishSheet(); toast('视频已上传'); }
     else toast(r.message || '视频上传失败');
+  }
+  if (t.id === 'fileBgm' && t.files && t.files.length) {
+    const f = t.files[0];
+    if (f.size > 20 * 1024 * 1024) { toast('音乐超过 20MB，请压缩后再上传'); return; }
+    toast('音乐上传中，请稍候…');
+    const r = await uploadFile(f, 'bgm');
+    if (r.ok) {
+      pub.bgm = { url: r.url, name: (f.name || '我的音乐').replace(/\.[^.]+$/, '') };
+      toast('音乐已上传，记得试听一下');
+    } else {
+      toast(r.message || '音乐上传失败');
+    }
+    renderPublishSheet();
   }
 }, true);
 

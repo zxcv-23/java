@@ -144,6 +144,31 @@ public class DatingController {
         return Result.success(datingService.workDetail(id, viewerId));
     }
 
+    /**
+     * 内置 BGM 曲库（公开）：音频文件是随项目合成的原创循环小曲，
+     * 放在 classpath:static/bgm/ 下，通过 /bgm/xxx.wav 直接访问，无版权问题。
+     * 前端发布作品时可从中挑选，也可上传自己的音乐。
+     */
+    @GetMapping("/bgm/library")
+    public Result<List<Map<String, String>>> bgmLibrary() {
+        List<Map<String, String>> lib = new ArrayList<>();
+        lib.add(track("wind-bells",  "风铃语",   "/bgm/wind-bells.wav",  "轻快明亮 · 风铃"));
+        lib.add(track("moonlight",   "月下独行", "/bgm/moonlight.wav",   "安静慢板 · 分解和弦"));
+        lib.add(track("first-sight", "初见",     "/bgm/first-sight.wav", "温暖三拍 · 八音盒"));
+        lib.add(track("summer-noon", "夏日午后", "/bgm/summer-noon.wav", "轻快跳音 · 阳光"));
+        lib.add(track("star-river",  "星河入梦", "/bgm/star-river.wav",  "梦幻慢板 · 铃声"));
+        return Result.success(lib);
+    }
+
+    private Map<String, String> track(String id, String name, String url, String mood) {
+        Map<String, String> m = new java.util.HashMap<>();
+        m.put("id", id);
+        m.put("name", name);
+        m.put("url", url);
+        m.put("mood", mood);
+        return m;
+    }
+
     /** 与某人的对话记录（读消息需要登录，否则不知道「我」是谁） */
     @GetMapping("/messages/{peerId}")
     public Result<List<DatingMessageVO>> conversation(
@@ -244,6 +269,15 @@ public class DatingController {
             @RequestParam("file") MultipartFile file) {
         String url = fileUploadService.uploadVideo(file);
         return Result.success("视频已上传", url);
+    }
+
+    /** 上传作品 BGM（单段音频，≤20MB，不转码） */
+    @PostMapping("/me/upload/bgm")
+    public Result<String> uploadBgm(
+            @RequestAttribute(JwtInterceptor.ATTR_USER_ID) Long userId,
+            @RequestParam("file") MultipartFile file) {
+        String url = fileUploadService.uploadAudio(file);
+        return Result.success("音乐已上传", url);
     }
 
     // ==================== 内部方法 ====================

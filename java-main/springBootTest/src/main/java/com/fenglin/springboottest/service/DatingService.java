@@ -62,6 +62,9 @@ public class DatingService {
     /** 消息里允许出现的 URL 前缀，避免把站外站点当图片/视频播放（简易白名单） */
     private static final String UPLOAD_PREFIX = "/uploads/";
 
+    /** 内置 BGM 曲库的静态资源前缀（classpath:static/bgm/），与上传地址一样是可信前缀 */
+    private static final String BGM_LIB_PREFIX = "/bgm/";
+
     private static final DateTimeFormatter DT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     @Autowired
@@ -239,9 +242,11 @@ public class DatingService {
             throw new BusinessException("至少上传一张照片或一段视频");
         }
         String bgm = StringUtils.hasText(req.getBgmUrl()) ? req.getBgmUrl().trim() : null;
-        // BGM 允许 http(s) 直链（便于放现成的音乐 CDN），但要挡掉 javascript: 这类协议
-        if (bgm != null && !(bgm.startsWith("http://") || bgm.startsWith("https://") || bgm.startsWith(UPLOAD_PREFIX))) {
-            throw new BusinessException("BGM 地址需以 http(s):// 或上传地址开头");
+        // BGM 允许 http(s) 直链（便于放现成的音乐 CDN）、本站上传的 /uploads/ 音频，
+        // 以及内置曲库的 /bgm/ 音频；挡掉 javascript: 这类协议
+        if (bgm != null && !(bgm.startsWith("http://") || bgm.startsWith("https://")
+                || bgm.startsWith(UPLOAD_PREFIX) || bgm.startsWith(BGM_LIB_PREFIX))) {
+            throw new BusinessException("BGM 地址需以 http(s)://、/uploads/ 或内置曲库地址开头");
         }
 
         DatingWork work = new DatingWork();

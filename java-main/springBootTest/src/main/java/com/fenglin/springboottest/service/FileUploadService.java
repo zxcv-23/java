@@ -68,6 +68,22 @@ public class FileUploadService {
             ".mp4", ".webm", ".ogv", ".ogg", ".mov", ".m4v"
     };
 
+    /** 作品 BGM 单个文件上限（字节），默认 20MB */
+    @Value("${file.upload.audio-max-size:20971520}")
+    private long audioMaxSize;
+
+    /** 允许的音频 MIME 类型 */
+    private static final String[] ALLOWED_AUDIO_TYPES = {
+            "audio/mpeg", "audio/mp3", "audio/mp4", "audio/x-m4a", "audio/aac",
+            "audio/ogg", "audio/wav", "audio/x-wav", "audio/wave", "audio/vorbis",
+            "audio/flac", "audio/x-flac", "audio/webm", "application/ogg"
+    };
+
+    /** 允许的音频扩展名（浏览器 MIME 不可靠时用扩展名兜底） */
+    private static final String[] ALLOWED_AUDIO_EXTS = {
+            ".mp3", ".m4a", ".aac", ".ogg", ".oga", ".wav", ".flac", ".webm"
+    };
+
     /**
      * 保存上传的图片（自动裁剪/压缩），返回可访问的 URL（形如 /uploads/avatar_1_a1b2c3.jpg）。
      *
@@ -224,6 +240,57 @@ public class FileUploadService {
             file.transferTo(dir.resolve(filename).toFile());
         } catch (IOException e) {
             throw new BusinessException("视频保存失败：" + e.getMessage());
+        }
+        return urlPrefix() + filename;
+    }
+
+    /**
+     * 保存作品 BGM 音频：与视频一样不做转码，校验类型与大小后原样落盘，
+     * 由浏览器 &lt;audio&gt; 直接播放。返回 /uploads/bgm_xxx.ext。
+     *
+     * @param file 上传的音频文件
+     * @return 音频访问地址
+     */
+    public String uploadAudio(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException("未检测到音频文件");
+        }
+        String contentType = file.getContentType();
+        String original = file.getOriginalFilename() == null ? "" : file.getOriginalFilename();
+        String lower = original.toLowerCase();
+        boolean typeOk = false;
+        for (String t : ALLOWED_AUDIO_TYPES) {
+            if (t.equalsIgnoreCase(contentType)) {
+                typeOk = true;
+                break;
+            }
+        }
+        boolean extOk = false;
+        String ext = "";
+        for (String e : ALLOWED_AUDIO_EXTS) {
+            if (lower.endsWith(e)) {
+                extOk = true;
+                ext = e;
+                break;
+            }
+        }
+        // 与视频同样的策略：MIME 或扩展名满足其一即可
+        if (!typeOk && !extOk) {
+            throw new BusinessException("仅支持 MP3 / M4A / OGG / WAV / FLAC 等音频格式");
+        }
+        if (file.getSize() > audioMaxSize) {
+            throw new BusinessException("音频过大，请控制在 " + (audioMaxSize / 1024 / 1024) + "MB 以内");
+        }
+        if (!extOk) {
+            ext = ".mp3";
+        }
+
+        Path dir = ensureUploadDir();
+        String filename = "bgm_" + UUID.randomUUID().toString().replace("-", "") + ext;
+        try {
+            file.transferTo(dir.resolve(filename).toFile());
+        } catch (IOException e) {
+            throw new BusinessException("音频保存失败：" + e.getMessage());
         }
         return urlPrefix() + filename;
     }

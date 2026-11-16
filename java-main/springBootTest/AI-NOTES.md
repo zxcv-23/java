@@ -344,3 +344,34 @@ adminJwtInterceptor   → /api/manage/**, /api/admin/**
 16 项端到端用例全部通过：双账号注册登录 → 图片/视频上传 → 匿名发布返回 401 → 发作品（3 媒体 + 封面 + BGM）→
 点赞三连切换正确 → 联系方式私信前隐藏 / 私信后可见 / 游客不可见 → 会话列表未读 2 → 打开对话自动清零 →
 给自己发信 400「不能给自己发私信哦」→ 删他人作品 400「只能删除自己的作品」→ 浏览数 +1 → 公开作品流可见。
+
+## 作品广场 + 自主配乐（2026-11-16 新增）
+
+### 需求
+发布作品要「能成功发布、所有人可见」，且作者可以给作品**自主配音乐**（不再只能填直链）。
+
+### 后端改动
+- `FileUploadService.uploadAudio()`：新增音频上传（MP3/M4A/AAC/OGG/WAV/FLAC/WEBM，MIME 或扩展名满足其一，
+  默认上限 20MB，`file.upload.audio-max-size` 可调），落盘 `bgm_<uuid>.<ext>`，不转码。
+- `DatingController`：
+  - `POST /api/dating/me/upload/bgm`（必须登录）→ 返回 `/uploads/bgm_xxx.mp3`。
+  - `GET /api/dating/bgm/library`（公开）→ 内置曲库列表 `{id,name,url,mood}`。
+- 内置曲库音频在 `src/main/resources/static/bgm/`（5 首 Python 合成的原创循环曲，WAV 22050Hz 单声道，
+  无版权问题；生成脚本在工作区 `gen_bgm.py`），通过 `/bgm/xxx.wav` 直接访问（Spring 默认静态资源）。
+- `DatingService` 的 BGM 白名单新增 `/bgm/` 前缀（`BGM_LIB_PREFIX`），否则选曲库曲目发布会 400。
+
+### 前端改动（static/dating.html）
+- 首页新增视图切换「♥ 找有缘人 / 🎵 作品广场」（`#viewTabs`）：广场调 `GET /api/dating/works?limit=60`，
+  游客可浏览、可开详情、可点进作者主页；点赞同步主页 / 详情 / 广场三处状态（`state.feed`）。
+- 发布弹层的 BGM 从「填直链」升级为三选一的配乐器：`#bgmTabs` = 内置曲库（可试听、点选）/
+  上传音乐（`fileBgm` → `/api/dating/me/upload/bgm`）/ 音频直链（仍支持，校验 http(s)）。
+  选中后显示已选条目，可再试听或移除；试听与详情页共用同一个 `bgmAudio` 实例（`previewBgm()`），
+  `stopBgm()` 会同时复位「播放/试听」按钮文案。
+- `renderPublishSheet()` 顶部先 `snapshotPublishInputs()`：上传图片/切换配乐标签导致整体重绘时，
+  标题、文案、直链输入不再丢失。
+- 发布成功后同时 `openProfile()` 刷新主页 + `loadFeed()` 刷新广场。
+
+### 注意
+- 改完代码必须重新 package 并重启 8081（老坑：跑旧 jar 时接口超时而非 404）。
+- 曲库 WAV 共约 4.7MB 打进 jar；如需换/加曲目，改脚本重新生成后同步更新
+  `DatingController#bgmLibrary` 的曲目清单。
