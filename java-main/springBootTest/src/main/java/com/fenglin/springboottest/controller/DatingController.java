@@ -3,6 +3,8 @@ package com.fenglin.springboottest.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fenglin.springboottest.common.Result;
 import com.fenglin.springboottest.dto.DatingCandidateVO;
+import com.fenglin.springboottest.dto.DatingCommentRequest;
+import com.fenglin.springboottest.dto.DatingCommentVO;
 import com.fenglin.springboottest.dto.DatingContactInfo;
 import com.fenglin.springboottest.dto.DatingConversationVO;
 import com.fenglin.springboottest.dto.DatingMessageRequest;
@@ -144,6 +146,14 @@ public class DatingController {
         return Result.success(datingService.workDetail(id, viewerId));
     }
 
+    /** 作品评论列表（游客可读，登录后额外标记「我的评论」） */
+    @GetMapping("/works/{id}/comments")
+    public Result<List<DatingCommentVO>> comments(
+            @PathVariable Long id,
+            @RequestAttribute(value = OptionalJwtInterceptor.ATTR_USER_ID, required = false) Long viewerId) {
+        return Result.success(datingService.comments(id, viewerId));
+    }
+
     /**
      * 内置 BGM 曲库（公开）：音频文件是随项目合成的原创循环小曲，
      * 放在 classpath:static/bgm/ 下，通过 /bgm/xxx.wav 直接访问，无版权问题。
@@ -212,6 +222,24 @@ public class DatingController {
         Map<String, Object> data = datingService.toggleLike(userId, workId);
         boolean liked = Boolean.TRUE.equals(data.get("liked"));
         return Result.success(liked ? "♥ 已点赞" : "已取消点赞", data);
+    }
+
+    /** 发表作品评论（需登录） */
+    @PostMapping("/me/works/{workId}/comments")
+    public Result<DatingCommentVO> addComment(
+            @RequestAttribute(JwtInterceptor.ATTR_USER_ID) Long userId,
+            @PathVariable Long workId,
+            @Valid @RequestBody DatingCommentRequest request) {
+        return Result.success("评论已送出 ♥", datingService.addComment(userId, workId, request.getContent()));
+    }
+
+    /** 删除自己的评论（需登录，作品作者也可清理自己作品下的评论） */
+    @DeleteMapping("/me/comments/{id}")
+    public Result<Void> deleteComment(
+            @RequestAttribute(JwtInterceptor.ATTR_USER_ID) Long userId,
+            @PathVariable Long id) {
+        datingService.deleteComment(userId, id);
+        return Result.success("评论已删除");
     }
 
     /** 发私信 */

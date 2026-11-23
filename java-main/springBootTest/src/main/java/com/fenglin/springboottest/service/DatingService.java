@@ -3,6 +3,7 @@ package com.fenglin.springboottest.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fenglin.springboottest.dto.DatingCandidateVO;
+import com.fenglin.springboottest.dto.DatingCommentVO;
 import com.fenglin.springboottest.dto.DatingContactInfo;
 import com.fenglin.springboottest.dto.DatingConversationVO;
 import com.fenglin.springboottest.dto.DatingMediaVO;
@@ -10,6 +11,7 @@ import com.fenglin.springboottest.dto.DatingMessageVO;
 import com.fenglin.springboottest.dto.DatingProfileVO;
 import com.fenglin.springboottest.dto.DatingWorkRequest;
 import com.fenglin.springboottest.dto.DatingWorkVO;
+import com.fenglin.springboottest.entity.DatingComment;
 import com.fenglin.springboottest.entity.DatingContact;
 import com.fenglin.springboottest.entity.DatingLike;
 import com.fenglin.springboottest.entity.DatingMessage;
@@ -17,6 +19,7 @@ import com.fenglin.springboottest.entity.DatingWork;
 import com.fenglin.springboottest.entity.DatingWorkMedia;
 import com.fenglin.springboottest.entity.User;
 import com.fenglin.springboottest.exception.BusinessException;
+import com.fenglin.springboottest.mapper.DatingCommentMapper;
 import com.fenglin.springboottest.mapper.DatingContactMapper;
 import com.fenglin.springboottest.mapper.DatingLikeMapper;
 import com.fenglin.springboottest.mapper.DatingMessageMapper;
@@ -75,6 +78,9 @@ public class DatingService {
 
     @Autowired
     private DatingLikeMapper likeMapper;
+
+    @Autowired
+    private DatingCommentMapper commentMapper;
 
     @Autowired
     private DatingMessageMapper messageMapper;
@@ -296,6 +302,7 @@ public class DatingService {
         }
         mediaMapper.delete(new LambdaQueryWrapper<DatingWorkMedia>().eq(DatingWorkMedia::getWorkId, workId));
         likeMapper.delete(new LambdaQueryWrapper<DatingLike>().eq(DatingLike::getWorkId, workId));
+        commentMapper.delete(new LambdaQueryWrapper<DatingComment>().eq(DatingComment::getWorkId, workId));
         workMapper.deleteById(workId);
     }
 
@@ -347,6 +354,95 @@ public class DatingService {
         workMapper.update(null, new LambdaUpdateWrapper<DatingWork>()
                 .eq(DatingWork::getId, workId)
                 .setSql(column + " = GREATEST(COALESCE(" + column + ", 0) + (" + delta + "), 0)"));
+    }
+
+    // ==================== 评论 ====================
+
+    /**
+     * 作品评论列表：游客可读，按发布时间升序，最多 200 条。
+     * 作者头像/昵称批量查询，避免「一条评论查一次用户」的 N+1。
+     */
+    public List<DatingCommentVO> comments(Long workId, Long viewerId) {
+        LambdaQueryWrapper<DatingComment> q = new LambdaQueryWrapper<>();
+        q.eq(DatingComment::getWorkId, workId).orderByAsc(DatingComment::getId).last("LIMIT 200");
+        List<DatingComment> rows = commentMapper.selectList(q);
+        if (rows.isEmpty()) {
+            return new ArrayList<>();
+        }
+        Set<Long> userIds = new HashSet<>();
+        for (DatingComment c : rows) {
+            userIds.add(c.getUserId());
+        }
+        Map<Long, User> userMap = new HashMap<>();
+        for (User u : userMapper.selectBatchIds(userIds)) {
+            userMap.put(u.getId(), u);
+        }
+        List<DatingCommentVO> list = new ArrayList<>(rows.size());
+        for (DatingComment c : rows) {
+            list.add(toCommentVO(c, viewerId, userMap.get(c.getUserId())));
+        }
+        return list;
+    }
+
+    /** 发表评论：作品须存在且公开（本人可见自己的私密作品），评论数用原子 SQL 累加 */
+    @Transactional
+    public DatingCommentVO addComment(Long userId, Long workId, String content) {
+        DatingWork work = workMapper.selectById(workId);
+        if (work == null) {
+            throw new BusinessException("作品不存在或已被删除");
+        }
+        boolean mine = userId.equals(work.getUserId());
+        if (!mine && (work.getVisible() == null || work.getVisible() != 1)) {
+            throw new BusinessException("这件作品仅作者本人可见");
+        }
+        if (!StringUtils.hasText(content)) {
+            throw new BusinessException("评论内容不能为空");
+        }
+        String text = content.trim();
+        if (text.length() > 500) {
+            throw new BusinessException("评论最多 500 个字");
+        }
+
+        DatingComment c = new DatingComment();
+        c.setWorkId(workId);
+        c.setUserId(userId);
+        c.setContent(text);
+        c.setCreateTime(LocalDateTime.now());
+        commentMapper.insert(c);
+        adjustCount(workId, "comment_count", 1);
+        return toCommentVO(c, userId, userMapper.selectById(userId));
+    }
+
+    /** 删除评论：评论者本人或作品作者可删，删除后原子递减评论数 */
+    @Transactional
+    public void deleteComment(Long userId, Long commentId) {
+        DatingComment c = commentMapper.selectById(commentId);
+        if (c == null) {
+            throw new BusinessException("评论不存在或已被删除");
+        }
+        DatingWork work = workMapper.selectById(c.getWorkId());
+        boolean canDelete = userId.equals(c.getUserId())
+                || (work != null && userId.equals(work.getUserId()));
+        if (!canDelete) {
+            throw new BusinessException("只能删除自己的评论");
+        }
+        commentMapper.deleteById(commentId);
+        adjustCount(c.getWorkId(), "comment_count", -1);
+    }
+
+    /** 评论实体转脱敏视图 */
+    private DatingCommentVO toCommentVO(DatingComment c, Long viewerId, User author) {
+        DatingCommentVO vo = new DatingCommentVO();
+        vo.setId(c.getId());
+        vo.setWorkId(c.getWorkId());
+        vo.setUserId(c.getUserId());
+        vo.setAuthorName(author == null ? "已注销用户"
+                : (StringUtils.hasText(author.getNickname()) ? author.getNickname() : "匿名有缘人"));
+        vo.setAuthorAvatar(author == null || author.getAvatar() == null ? "" : author.getAvatar());
+        vo.setContent(c.getContent());
+        vo.setMine(viewerId != null && viewerId.equals(c.getUserId()));
+        vo.setCreatedAt(fmt(c.getCreateTime()));
+        return vo;
     }
 
     // ==================== 私信 ====================

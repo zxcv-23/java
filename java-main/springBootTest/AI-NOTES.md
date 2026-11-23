@@ -4,7 +4,7 @@
 
 ## 项目概况
 - Spring Boot 3.4.5 + Java 17/21 + MyBatis-Plus 3.5.7 + MySQL 8，端口 **8081**，profile=dev
-- 当前版本路径：`C:\Users\user\IdeaProjects\java\java-main\springBootTest`（前端同级 `guiniang-huajia-vue`）
+- 当前版本路径：`D:\workSpace\java\java-main\springBootTest`（前端同级 `guiniang-huajia-vue`）——2026-11-23 复核；下文出现的 `C:\Users\user\IdeaProjects\...` 均为旧路径，已作废
 - 前台注册/登录 + 个人中心：
   - `POST /api/user/register` `{"username","password"}`（用户名 2~20 位，密码 6~32 位，BCrypt）
   - `POST /api/user/login` `{"account","password"}` → 用户信息 + **scope=user 的 JWT**
@@ -127,7 +127,7 @@ curl -H "Authorization: Bearer <token>" "http://192.168.68.22:8081/api/manage/it
 - 旧库无需手工执行 `fix_*.sql` 也能自愈；手工脚本仍保留作兜底。
 
 ### 本机环境事实（2026-11-05 复核）
-- 项目实际路径：`C:\Users\user\IdeaProjects\java\java-main\springBootTest`（2026-11-06 复核，D 盘那份已不存在）
+- 项目实际路径（2026-11-06 记录，已过时）：~~`C:\Users\user\IdeaProjects\java\java-main\springBootTest`~~；以文首 2026-11-23 复核的 `D:\workSpace\java\java-main\springBootTest` 为准
 - Java：`java -version` 为 **Zulu 21.0.10**；pom `<java.version>17</java.version>` 以 `--release 17` 编译，正常通过
 - Maven home：`C:\Users\user\.m2\wrapper\dists\apache-maven-3.9.9-bin\4nf9hui3q3djbarqar9g711ggc\apache-maven-3.9.9`
 - 可靠构建命令（Git Bash 里直接跑 `mvn` 仍会报 Unable to access jarfile）：
@@ -375,3 +375,53 @@ adminJwtInterceptor   → /api/manage/**, /api/admin/**
 - 改完代码必须重新 package 并重启 8081（老坑：跑旧 jar 时接口超时而非 404）。
 - 曲库 WAV 共约 4.7MB 打进 jar；如需换/加曲目，改脚本重新生成后同步更新
   `DatingController#bgmLibrary` 的曲目清单。
+
+## 2026-11-23：本机地址统一 + 评论 + 主页私信卡片
+
+### 路径 / 环境更正（覆盖上文旧记录）
+- **当前项目实际路径就是 `D:\workSpace\java\java-main\springBootTest`**（上文写的 `C:\Users\user\IdeaProjects\...` 已作废）；
+  前端姊妹项目同级 `D:\workSpace\java\java-main\guiniang-huajia-vue`。
+- **前后端统一用本机地址，不再写死局域网 IP**：
+  - 前端 `vite.config.js`：`server.host = 'localhost'`，端口 5173。
+  - 后端 `application-dev.properties`：`server.address = 127.0.0.1`，端口 8081（数据库连接本就是 127.0.0.1）。
+  - `config/CorsConfig.java` 白名单：`http://localhost:5173` + `http://127.0.0.1:5173`（旧 `192.168.68.22:5173` 已移除）。
+  - `start-backend.bat`（**GBK 编码**，用普通文本编辑器改会乱码；按字节替换 `192.168.68.22`→`127.0.0.1` 最稳）启动提示已同步。
+  - 验证：后端直启不报 BindException；模拟前端 `Origin: http://localhost:5173` 预检返回对应 `Access-Control-Allow-Origin`。
+
+### 新增：作品评论（后端 + 前端）
+- 表 `dating_comment`：id / work_id / user_id / content(≤500) / create_time，索引 `(work_id,id)`；由 `SchemaMigration#ensureDatingTables` 幂等建表。
+- 新文件：`entity/DatingComment`、`mapper/DatingCommentMapper`、`dto/DatingCommentRequest`、`dto/DatingCommentVO`。
+- `DatingService`：`comments(workId,viewerId)` / `addComment(userId,workId,content)` / `deleteComment(userId,commentId)`；
+  复用 `adjustCount(workId,"comment_count",±1)`；删作品时级联删评论。评论数冗余在 `dating_work.comment_count`。
+- `DatingController` 新增 3 个接口：
+  | 方法 | 路径 | 鉴权 | 说明 |
+  | --- | --- | --- | --- |
+  | GET | `/api/dating/works/{id}/comments` | 可选 | 评论列表，登录后标记 `mine` |
+  | POST | `/api/dating/me/works/{workId}/comments` | 必须 | 发评论，`@Valid` 校验 1~500 字 |
+  | DELETE | `/api/dating/me/comments/{id}` | 必须 | 删评论，评论者本人或作品作者可删 |
+- 前端 `dating.html` 作品详情弹窗加评论区：列表 / 输入框 / 删除 / `Ctrl+Enter` 发送，游客只读；
+  `renderComments()` 单独重绘评论区，避免点赞重绘整个弹层时丢失输入焦点。
+
+### 新增：自己主页的私信管理卡片（纯前端）
+- 截图里的主页是**自己的主页**（有「我的联系方式」「发布作品」），而「发私信」按钮只在别人主页有。
+  于是在 `renderProfile()` 里 `p.mine` 时往 `profileContent` 追加 `#profileMsgCard`：
+  展示最近 5 条会话（头像/昵称/最后一句/未读角标）、「查看全部」开私信抽屉、空态引导去广场。
+- `loadProfileMessages()` 复用现成的 `GET /api/dating/me/conversations`，用 `box.isConnected` 防止重绘后旧结果覆盖。
+- 会话行复用已有 `[data-chat]` → `openChat()`；`[data-msgall]` → `openChatList()`；`[data-gosquare]` → 回嘉宾列表。
+- **没有新增后端接口**，私信能力本就完备，这次只是把它暴露到自己的主页上。
+
+### 本机构建 / 验证工具（覆盖上文旧 Maven 写法）
+- `mvnw` 缺 wrapper jar，Git Bash 调 `mvn` 会因路径转换报 `classworlds.launcher.Launcher` 找不到。
+  **可靠方式：用 PowerShell** 调缓存里的 `mvn.cmd`：
+  ```powershell
+  $m2 = "$env:USERPROFILE\.m2\wrapper\dists\apache-maven-3.9.9\3477a4f1\bin\mvn.cmd"
+  & $m2 -o -DskipTests compile
+  # 启动：先清 SERVER__PORT/SERVER__HOST 等环境变量，再 & $m2 -o spring-boot:run
+  ```
+- 启动前必须清 `SERVER__PORT`（会覆盖 8081）。`stop-backend.bat`。
+- **改了 `static/dating.html` 必须重启后端**，Spring 对静态资源有内存缓存，仅重新编译不够（本次踩过：curl 返回旧 HTML）。
+- 浏览器视觉验证用 `agent-browser`（全局 npm 安装 + `agent-browser install` 装 Chrome）：
+  单条命令的 daemon 会话不保持，**用 `batch` 把 open/wait/scrollintoview/click/screenshot 串一次调用**；
+  batch 会吞掉参数里的引号，CSS 选择器用无引号写法；带 token 的登录态用
+  `dating.html?token=<jwt>&uid=<id>&name=<nick>` 注入（页面 `absorbAuthFromUrl()` 接收后抹掉地址栏参数）。
+- 2026-11-23 验证：评论 6 项 + 私信卡片浏览器截图，全部通过；测试用户/消息已清理，库内 user/message/comment 归零。

@@ -170,6 +170,23 @@
   .contact-item button{border:0;background:transparent;color:var(--blue);font-size:12px;padding:0}
   .contact-locked{font-size:13px;color:#7a5b12;line-height:1.8}
 
+  /* 主页私信卡片（仅自己的主页） */
+  .msg-card{margin:0 0 26px;border:1px solid var(--line);border-radius:16px;padding:18px 20px;background:#fff}
+  .msg-card h4{margin:0 0 12px;font-size:14px;display:flex;align-items:center;gap:8px}
+  .msg-card h4 .mc-all{margin-left:auto;border:0;background:transparent;color:var(--blue);font-size:12px;cursor:pointer;padding:0}
+  .msg-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
+  .msg-row:last-child{border-bottom:0}
+  .msg-row .mini{width:38px;height:38px;border-radius:50%;flex:none;position:relative;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;background:linear-gradient(135deg,#f6a5b6,#e0455f)}
+  .msg-row .mini img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .msg-row .txt{flex:1;min-width:0}
+  .msg-row .txt b{display:block;font-size:14px}
+  .msg-row .txt span{font-size:12px;color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .msg-row .unread{background:var(--rose);color:#fff;font-size:11px;border-radius:999px;padding:1px 7px;flex:none}
+  .msg-row .tm{font-size:11px;color:#aaa;flex:none}
+  .msg-empty-tip{font-size:13px;color:var(--muted);line-height:1.8}
+  .msg-empty-tip button{border:0;background:transparent;color:var(--blue);font-size:13px;padding:0;cursor:pointer}
+
   /* 作品网格 */
   .works-head{display:flex;align-items:center;justify-content:space-between;margin:6px 0 16px;gap:12px;flex-wrap:wrap}
   .works-head h3{margin:0;font-size:17px}
@@ -227,6 +244,31 @@
   @keyframes spin{to{transform:rotate(360deg)}}
   .bgm-bar .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .bgm-bar button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 12px;font-size:12px}
+
+  /* ---------- 作品评论区 ---------- */
+  .comment-box{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+  .cmt-head{font-size:14px;margin-bottom:10px}
+  .cmt-head .cmt-count{color:var(--rose);margin-left:2px}
+  .cmt-list{max-height:220px;overflow:auto;display:flex;flex-direction:column;gap:12px}
+  .cmt-empty{font-size:13px;color:var(--muted);padding:8px 2px}
+  .cmt-item{display:flex;gap:9px;align-items:flex-start}
+  .cmt-item .mini{width:32px;height:32px;border-radius:50%;overflow:hidden;position:relative;flex:none;
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;background:linear-gradient(135deg,#f6a5b6,#e0455f)}
+  .cmt-item .mini img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .cmt-main{flex:1;min-width:0}
+  .cmt-hd{display:flex;align-items:baseline;gap:8px}
+  .cmt-hd b{font-size:13px}
+  .cmt-hd span{font-size:11px;color:var(--muted)}
+  .cmt-text{margin:3px 0 0;font-size:13px;line-height:1.7;color:#3c4043;white-space:pre-wrap;word-break:break-word}
+  .cmt-del{border:0;background:transparent;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:0 2px}
+  .cmt-del:hover{color:var(--rose)}
+  .cmt-compose{display:flex;gap:8px;align-items:flex-end;margin-top:12px}
+  .cmt-input{flex:1;min-height:38px;max-height:100px;resize:vertical;border:1px solid var(--line);border-radius:10px;
+    padding:8px 10px;font-family:inherit;font-size:13px;line-height:1.5;outline:none}
+  .cmt-input:focus{border-color:var(--rose)}
+  .cmt-send{border:0;border-radius:999px;background:var(--rose);color:#fff;font-size:13px;padding:9px 18px;cursor:pointer;flex:none}
+  .cmt-send:disabled{opacity:.6;cursor:default}
+  .cmt-login{font-size:12px;color:var(--muted);padding:6px 2px}
 
   /* ---------- 表单弹层（发布作品） ---------- */
   .sheet{position:fixed;left:50%;top:50%;transform:translate(-50%,-46%) scale(.96);z-index:22;
@@ -499,6 +541,9 @@ const state = {
   profileUserId: null,
   worksPreview: null,  // 作品详情弹层数据
   detailIndex: 0,
+  comments: [],        // 当前作品评论列表
+  commentsLoaded: false, // 评论是否已加载（按作品切换时重置）
+  commentDraft: '',    // 评论输入框草稿（重绘时保留）
   chatPeer: null,      // 正在聊天的对方 {id, name, avatar}
   publishing: false,
   contactLoaded: false,
@@ -895,7 +940,17 @@ function renderProfile() {
       + '对方设置了「私信过来往才可见」——先发条私信打个招呼吧，聊过之后这里就会显示。</div></div>';
   }
 
-  $('profileContent').innerHTML = head + contact;
+  // 私信卡片（仅自己的主页）：展示最近会话，点开即聊
+  let msgCard = '';
+  if (p.mine) {
+    msgCard = '<div class="msg-card" id="profileMsgCard">'
+      + '<h4>✉ 私信 <button class="mc-all" data-msgall>查看全部 →</button></h4>'
+      + '<div class="msg-list" id="profileMsgList"><div class="msg-empty-tip">正在读取私信…</div></div>'
+      + '</div>';
+  }
+  $('profileContent').innerHTML = head + contact + msgCard;
+  if (p.mine) loadProfileMessages();
+
   $('worksTitle').textContent = p.mine ? '我的作品集' : '作品集';
   $('worksTag').textContent = works.length + ' 件 · 点击查看详情';
 
@@ -971,9 +1026,115 @@ function openWorkDetail(workOrId) {
   if (!w) { toast('作品已不存在'); return; }
   state.worksPreview = w;
   state.detailIndex = 0;
+  state.comments = [];
+  state.commentsLoaded = false;
+  state.commentDraft = '';
   renderWorkDetail();
   $('mask').classList.add('show');
   $('detailModal').classList.add('show');
+  loadComments(w.id);
+}
+
+/** 拉取当前作品的评论；返回时确认弹层仍是同一件作品，避免串台 */
+async function loadComments(workId) {
+  const r = await api('/api/dating/works/' + workId + '/comments');
+  if (!state.worksPreview || String(state.worksPreview.id) !== String(workId)) return;
+  if (!r.ok) {
+    state.commentsLoaded = true;
+    renderComments();
+    return;
+  }
+  state.comments = r.data || [];
+  state.commentsLoaded = true;
+  renderComments();
+}
+
+/**
+ * 只重绘评论区，不动整个详情弹层：
+ * 这样点赞 / 收到评论后刷新，不会让正在输入的评论框丢焦点。
+ */
+function renderComments() {
+  const box = $('commentBox');
+  if (!box || !state.worksPreview) return;
+  const list = state.comments;
+  const loading = !state.commentsLoaded;
+
+  let items = '';
+  if (loading) {
+    items = '<div class="cmt-empty">评论加载中…</div>';
+  } else if (!list.length) {
+    items = '<div class="cmt-empty">还没有评论，来抢沙发吧 ♡</div>';
+  } else {
+    items = list.map(c =>
+        '<div class="cmt-item">'
+      +   '<div class="mini">' + esc((c.authorName || '?').charAt(0))
+      +     (c.authorAvatar ? '<img src="' + esc(c.authorAvatar) + '" alt="">' : '') + '</div>'
+      +   '<div class="cmt-main">'
+      +     '<div class="cmt-hd"><b>' + esc(c.authorName) + '</b><span>' + esc(c.createdAt || '') + '</span></div>'
+      +     '<p class="cmt-text">' + esc(c.content) + '</p>'
+      +   '</div>'
+      +   (c.mine ? '<button class="cmt-del" data-delcmt="' + c.id + '" title="删除评论">×</button>' : '')
+      + '</div>').join('');
+  }
+
+  const input = loggedIn()
+      ? '<textarea id="cmtInput" class="cmt-input" maxlength="500" placeholder="说点什么吧…">'
+          + esc(state.commentDraft) + '</textarea>'
+      + '<button class="cmt-send" data-sendcmt="' + state.worksPreview.id + '">发送</button>'
+      : '<div class="cmt-login">登录后即可发表评论，请先回主站登录 ♥</div>';
+
+  box.innerHTML =
+      '<div class="cmt-head"><b>评论 <span class="cmt-count">' + (state.worksPreview.commentCount || 0) + '</span></b></div>'
+    + '<div class="cmt-list">' + items + '</div>'
+    + '<div class="cmt-compose">' + input + '</div>';
+}
+
+/** 发表评论 */
+async function sendComment(workId, btn) {
+  if (!loggedIn()) { toast('登录后才能评论，请先回主站登录'); return; }
+  const input = $('cmtInput');
+  const text = (input ? input.value : '').trim();
+  if (!text) { toast('写点什么再发送吧'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = '发送中'; }
+  const r = await api('/api/dating/me/works/' + workId + '/comments', {
+    method: 'POST', body: { content: text }
+  });
+  if (btn) { btn.disabled = false; btn.textContent = '发送'; }
+  if (!r.ok) { toast(r.message || '评论失败'); return; }
+  state.commentDraft = '';
+  state.comments.push(r.data);
+  if (state.worksPreview && String(state.worksPreview.id) === String(workId)) {
+    state.worksPreview.commentCount = (state.worksPreview.commentCount || 0) + 1;
+    // 同步主页 / 广场里这件作品的评论数
+    syncWorkField(workId, 'commentCount', state.worksPreview.commentCount);
+    renderComments();
+  }
+  toast('评论已送出 ♥');
+}
+
+/** 删除自己的评论 */
+async function deleteComment(commentId) {
+  if (!confirm('确定删除这条评论吗？')) return;
+  const r = await api('/api/dating/me/comments/' + commentId, { method: 'DELETE' });
+  if (!r.ok) { toast(r.message || '删除失败'); return; }
+  state.comments = state.comments.filter(c => String(c.id) !== String(commentId));
+  if (state.worksPreview) {
+    state.worksPreview.commentCount = Math.max(0, (state.worksPreview.commentCount || 0) - 1);
+    syncWorkField(state.worksPreview.id, 'commentCount', state.worksPreview.commentCount);
+  }
+  renderComments();
+  toast('评论已删除');
+}
+
+/** 把作品某个字段同步到主页列表与广场列表（点赞/评论共用） */
+function syncWorkField(workId, field, value) {
+  const places = [];
+  if (state.profile && state.profile.works) places.push(state.profile.works);
+  if (state.feed) places.push(state.feed);
+  for (const arr of places) {
+    const w = arr.find(x => String(x.id) === String(workId));
+    if (w) w[field] = value;
+  }
 }
 
 function renderWorkDetail() {
@@ -1027,7 +1188,9 @@ function renderWorkDetail() {
     +     '<span class="stat">' + (w.viewCount || 0) + ' 次浏览 · ' + (w.likeCount || 0) + ' 次点赞</span>'
     +     del + likeBtn
     +   '</div>'
+    +   '<div class="comment-box" id="commentBox"></div>'
     + '</div>';
+  renderComments();
 }
 
 async function toggleWorkLike(workId) {
@@ -1294,6 +1457,31 @@ async function saveContact() {
 /* =========================================================
  * 私信
  * ========================================================= */
+
+/** 个人主页的私信卡片：只展示最近 5 条会话，点开即聊 */
+async function loadProfileMessages() {
+  const box = $('profileMsgList');
+  if (!box) return;
+  const r = await api('/api/dating/me/conversations');
+  if (!box.isConnected) return; // 主页已被重绘，丢弃过期结果
+  if (!r.ok) {
+    box.innerHTML = '<div class="msg-empty-tip">私信读取失败，稍后再试</div>';
+    return;
+  }
+  const list = r.data || [];
+  if (!list.length) {
+    box.innerHTML = '<div class="msg-empty-tip">还没有私信。去嘉宾列表或作品广场逛逛，'
+      + '给中意的人打个招呼吧。<button data-gosquare>去逛逛 →</button></div>';
+    return;
+  }
+  box.innerHTML = list.slice(0, 5).map(c =>
+    '<div class="msg-row" data-chat="' + c.peerId + '" data-name="' + esc(c.peerName) + '" data-avatar="' + esc(c.peerAvatar || '') + '">'
+    + '<div class="mini">' + esc((c.peerName || '?').charAt(0)) + (c.peerAvatar ? '<img src="' + esc(c.peerAvatar) + '" alt="">' : '') + '</div>'
+    + '<div class="txt"><b>' + esc(c.peerName) + '</b><span>' + (c.lastFromMe ? '我：' : '') + esc(c.lastMessage) + '</span></div>'
+    + (c.unread > 0 ? '<span class="unread">' + c.unread + '</span>' : '<span class="tm">' + esc((c.lastTime || '').slice(5, 16)) + '</span>')
+    + '</div>').join('');
+}
+
 async function openChatList() {
   if (!loggedIn()) { toast('登录后才能查看私信，请先回主站登录'); return; }
   $('chatList').innerHTML = '<div class="empty" style="padding:30px 0"><p>正在读取…</p></div>';
@@ -1474,6 +1662,8 @@ $('profilePage').addEventListener('click', e => {
   }
   if (e.target.closest('#editContactBtn') || e.target.closest('#editContactBtn2')) { openContactSheet(); return; }
   if (e.target.closest('#publishFromProfile')) { openPublish(); return; }
+  if (e.target.closest('[data-msgall]')) { openChatList(); return; }
+  if (e.target.closest('[data-gosquare]')) { closeOverlays(); switchView('people'); return; }
   const chat = e.target.closest('[data-chat]');
   if (chat) { openChat({ id: Number(chat.dataset.chat), name: chat.dataset.name, avatar: chat.dataset.avatar || '' }); return; }
   const hanxin = e.target.closest('[data-hanxin]');
@@ -1488,6 +1678,20 @@ $('worksGrid').addEventListener('click', e => {
   if (card) openWorkDetail(card.dataset.work);
 });
 
+/* 评论框输入时保存草稿，避免点赞等操作重绘弹层后内容丢失 */
+$('detailModal').addEventListener('input', e => {
+  if (e.target && e.target.id === 'cmtInput') state.commentDraft = e.target.value;
+});
+
+/* 评论框 Ctrl/⌘ + Enter 快捷发送 */
+$('detailModal').addEventListener('keydown', e => {
+  if (e.target && e.target.id === 'cmtInput' && (e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    const btn = $('commentBox').querySelector('[data-sendcmt]');
+    if (btn) btn.click();
+  }
+});
+
 /* 作品详情弹层：缩略图切换 / 点赞 / 删除 / BGM */
 $('detailModal').addEventListener('click', e => {
   if (e.target.closest('#closeDetail')) { closeOverlays(); return; }
@@ -1499,6 +1703,10 @@ $('detailModal').addEventListener('click', e => {
   if (del) { deleteWork(del.dataset.delwork); return; }
   const bgmBtn = e.target.closest('[data-bgm-toggle]');
   if (bgmBtn) { toggleBgm(bgmBtn.dataset.bgm, bgmBtn); return; }
+  const sendCmt = e.target.closest('[data-sendcmt]');
+  if (sendCmt) { sendComment(sendCmt.dataset.sendcmt, sendCmt); return; }
+  const delCmt = e.target.closest('[data-delcmt]');
+  if (delCmt) { deleteComment(delCmt.dataset.delcmt); return; }
   const author = e.target.closest('[data-open]');
   if (author && author.dataset.closeDetail) {
     goProfileFromOverlay(author.dataset.open);

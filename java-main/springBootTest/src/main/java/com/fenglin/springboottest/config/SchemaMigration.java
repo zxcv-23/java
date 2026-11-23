@@ -110,6 +110,18 @@ public class SchemaMigration implements ApplicationRunner {
                         "KEY `idx_dating_like_user` (`user_id`)" +
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='作品点赞'",
 
+                // 作品评论：按作品聚合，id 升序即发布时间序；统计冗余在 dating_work.comment_count
+                "CREATE TABLE IF NOT EXISTS `dating_comment` (" +
+                        "`id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID'," +
+                        "`work_id` BIGINT NOT NULL COMMENT '作品ID'," +
+                        "`user_id` BIGINT NOT NULL COMMENT '评论用户ID'," +
+                        "`content` VARCHAR(500) NOT NULL COMMENT '评论内容'," +
+                        "`create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP," +
+                        "PRIMARY KEY (`id`)," +
+                        "KEY `idx_dating_comment_work` (`work_id`,`id`)," +
+                        "KEY `idx_dating_comment_user` (`user_id`)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='作品评论'",
+
                 // 私信：会话不建表，按 least/greatest 归组；双索引分别支撑「我收的」和「我发的」
                 "CREATE TABLE IF NOT EXISTS `dating_message` (" +
                         "`id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID'," +
