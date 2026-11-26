@@ -432,4 +432,7 @@ adminJwtInterceptor   → /api/manage/**, /api/admin/**
 - 修复：先 `mysqldump dd user > sql/backup/user_backup_20261126_before_restore.sql` 备份，再从 `sql/dd.sql`(fff) 和 `sql/backup/user_backup_20261102.sql`(probe_ai_01) 幂等 `INSERT IGNORE` 补回 2 个历史账号（保留原 BCrypt 密码/昵称/注册时间，不改现有 ff）。现在 3 位嘉宾。
 - 验证：注册 `wb_verify_20261126` 后 candidates 立刻从 3→4，随后删除该测试账号恢复 3。`demo=false` 说明都是真实库用户，不是示例数据。
 - 提醒：若以后再出现"只有自己"，先查 `SELECT COUNT(*) FROM dd.user;` 再查接口，不要先改前端；库被重置时历史账号只能从 `sql/*.sql` 备份恢复。
+- 追加根因（用户仍看不到新注册账号）：`static/dating.html` 的「去登录」「去注册」「buildLoginLink()」三处仍写 `http://192.168.68.22:5173/`（已不可达），点进去根本到不了注册页；已统一改 `http://localhost:5173/` 并重启后端验证返回页中 3 处均为新地址。
+- 另一个坑：`guiniang-huajia-vue/guinhuajia-Vue.html` 是纯演示页，原注册/登录只 `setTimeout` 假装成功、不写库；已改为真实调用 8081 接口（详见前端 AI-NOTES）。用该页注册过的账号不会出现在姻缘阁。
+
 

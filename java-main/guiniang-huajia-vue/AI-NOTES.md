@@ -162,3 +162,10 @@ src/components/MyGames.vue   ← 外壳：列表 / 详情 / 开玩 三段状态�
 - 昵称和头像可能含中文/特殊字符，拼 URL 时必须 `encodeURIComponent`。
 - token 24 小时过期；过期后姻缘阁会提示「主站登录态已过期」，点「去登录」跳回 5173 登录页。
 - 跨源只能靠 URL 传，**不要**试图用 cookie（8081 与 5173 不同端口，SameSite/域名都不对）。
+
+## 2026-11-26：单文件演示页注册/登录不再作假
+- 根目录 `guinhuajia-Vue.html` 原 `onRegisterSubmit()` / `onLoginSubmit()` 只是 `setTimeout(950ms)` 后显示成功，**从未调用后端**，所以在该页"注册"的账号不会进 `dd.user`，姻缘阁自然看不到。
+- 已改为 `fetch http://127.0.0.1:8081/api/user/register|login`，注册只传 `{username,password}`（邮箱字段仅界面展示），登录成功后把 `guiniang_user` 写入 sessionStorage；失败显示后端 `message`。
+- 该页用 CDN 版 Vue，必须通过 `localhost:5173/guinhuajia-Vue.html` 打开；直接 `file://` 打开会因 CORS 失败（提示语已写明）。
+- 另：后端 `static/dating.html` 的「去登录 / 去注册 / buildLoginLink」三处旧 `192.168.68.22:5173` 已改成 `http://localhost:5173/`，改后必须重启后端（静态资源有缓存）。
+

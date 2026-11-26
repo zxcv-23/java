@@ -376,6 +376,9 @@
 <script>
 const { createApp, ref, nextTick, onMounted, onBeforeUnmount } = Vue;
 
+/* 后端地址：注册/登录必须写进 dd.user，姻缘阁才能看到。请用 localhost:5173 打开本页（file:// 会被跨域拦截）。 */
+const API_BASE = 'http://127.0.0.1:8081';
+
 /* ---------- 鬼娘花嫁组件（SVG 放在 JS 模板字符串里，避免 in-DOM 模板把 viewBox 转小写） ---------- */
 const GhostBride = {
   props: { happy: Boolean },
@@ -524,18 +527,33 @@ createApp({
     function loginShowHint(msg) { loginHint.value = msg; loginHintShow.value = true; loginShake(); }
     function loginToggle() { showPass.value = !showPass.value; if (loginPass.value) loginPass.value.focus(); }
 
-    function onLoginSubmit() {
+    async function onLoginSubmit() {
       if (loginLoading.value || loginSuccess.value) return;
       var u = username.value.trim(), pw = password.value.trim();
       if (!u) { loginShowHint('夫君还不肯报名吗？'); loginUser.value.focus(); return; }
       if (!pw) { loginShowHint('没有暗语，如何与我结契～'); loginPass.value.focus(); return; }
       loginHintShow.value = false;
       loginLoading.value = true;
-      setTimeout(function () {
+      try {
+        const res = await fetch(API_BASE + '/api/user/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account: u, password: pw })
+        });
+        const json = await res.json();
+        if (res.ok && json.code === 200) {
+          window.sessionStorage.setItem('guiniang_user', JSON.stringify(json.data || {}));
+          loginLoading.value = false;
+          loginSuccess.value = true;
+          rainHearts(loginCard.value.getBoundingClientRect());
+        } else {
+          loginLoading.value = false;
+          loginShowHint(json.message || '结契失败，请稍后再试');
+        }
+      } catch (e) {
         loginLoading.value = false;
-        loginSuccess.value = true;
-        rainHearts(loginCard.value.getBoundingClientRect());
-      }, 950);
+        loginShowHint('后端未连接 · 请通过 localhost:5173 打开本页并启动后端');
+      }
     }
 
     /* ---------- 注册表单 ---------- */
@@ -562,7 +580,7 @@ createApp({
     function regShowHint(msg) { regHint.value = msg; regHintShow.value = true; regShake(); }
     function regToggle() { showPass.value = !showPass.value; if (regPass.value) regPass.value.focus(); }
 
-    function onRegisterSubmit() {
+    async function onRegisterSubmit() {
       if (regLoading.value || regSuccess.value) return;
       var u = regName.value.trim(), em = regEmail.value.trim(), pw = regPassword.value, cf = regConfirm.value;
       if (!u) { regShowHint('夫君还无名讳吗？'); regUser.value.focus(); return; }
@@ -573,11 +591,26 @@ createApp({
       if (!regAgree.value) { regShowHint('需以魂魄为聘，方得结契'); return; }
       regHintShow.value = false;
       regLoading.value = true;
-      setTimeout(function () {
+      try {
+        // 只提交后端需要的用户名/密码；邮箱仅作界面展示，后端不收集
+        const res = await fetch(API_BASE + '/api/user/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: u, password: pw })
+        });
+        const json = await res.json();
+        if (res.ok && json.code === 200) {
+          regLoading.value = false;
+          regSuccess.value = true;
+          rainHearts(regCard.value.getBoundingClientRect());
+        } else {
+          regLoading.value = false;
+          regShowHint(json.message || '录入失败，请稍后再试');
+        }
+      } catch (e) {
         regLoading.value = false;
-        regSuccess.value = true;
-        rainHearts(regCard.value.getBoundingClientRect());
-      }, 950);
+        regShowHint('后端未连接 · 请通过 localhost:5173 打开本页并启动后端');
+      }
     }
 
     /* ---------- 爱心雨 ---------- */

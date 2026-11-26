@@ -430,7 +430,7 @@
 <main>
   <div class="login-tip" id="loginTip" style="display:none">
     <span>登录后才能发布作品、点赞、发私信和查看联系方式</span>
-    <a id="loginLink" href="http://192.168.68.22:5173/" target="_blank" rel="noopener noreferrer">去登录 →</a>
+    <a id="loginLink" href="http://localhost:5173/" target="_blank" rel="noopener noreferrer">去登录 →</a>
   </div>
   <div class="notice" id="notice"></div>
   <div id="peopleView">
@@ -443,7 +443,7 @@
       <div class="ico">🪷</div>
       <h3>还没有中意的人</h3>
       <p>换个关键词或筛选条件试试，也可以先去本站注册，让自己出现在姻缘簿上。</p>
-      <a href="http://192.168.68.22:5173/" target="_blank" rel="noopener noreferrer">去注册 · 入姻缘簿</a>
+      <a href="http://localhost:5173/" target="_blank" rel="noopener noreferrer">去注册 · 入姻缘簿</a>
     </div>
   </div>
   <div id="squareView" style="display:none">
@@ -643,7 +643,7 @@ function renderLoginTip() {
 
 /* 登录链接带上回跳参数，主站登录后能原路返回来 */
 function buildLoginLink() {
-  const base = 'http://192.168.68.22:5173/';
+  const base = 'http://localhost:5173/';
   try {
     const u = new URL(base);
     u.searchParams.set('redirect', location.href.split('?')[0]);
