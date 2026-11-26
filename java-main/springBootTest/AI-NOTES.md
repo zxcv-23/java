@@ -425,3 +425,11 @@ adminJwtInterceptor   → /api/manage/**, /api/admin/**
   batch 会吞掉参数里的引号，CSS 选择器用无引号写法；带 token 的登录态用
   `dating.html?token=<jwt>&uid=<id>&name=<nick>` 注入（页面 `absorbAuthFromUrl()` 接收后抹掉地址栏参数）。
 - 2026-11-23 验证：评论 6 项 + 私信卡片浏览器截图，全部通过；测试用户/消息已清理，库内 user/message/comment 归零。
+
+## 2026-11-26：姻缘阁只显示 1 位嘉宾（注册账号"消失"）
+- 现象：`/dating.html` 只有 1 张卡片（ff），用户以为"别人注册的账号看不到"。
+- 根因：**不是接口/前端过滤问题**。`GET /api/dating/candidates` 只查 `dd.user` 中 `status=1` 的行；当时 `dd.user` 实际只有 1 行。历史账号在 `dd` 库被外部 DROP 后按早期备份恢复时是 `user=0`，之后只新注册了 ff。
+- 修复：先 `mysqldump dd user > sql/backup/user_backup_20261126_before_restore.sql` 备份，再从 `sql/dd.sql`(fff) 和 `sql/backup/user_backup_20261102.sql`(probe_ai_01) 幂等 `INSERT IGNORE` 补回 2 个历史账号（保留原 BCrypt 密码/昵称/注册时间，不改现有 ff）。现在 3 位嘉宾。
+- 验证：注册 `wb_verify_20261126` 后 candidates 立刻从 3→4，随后删除该测试账号恢复 3。`demo=false` 说明都是真实库用户，不是示例数据。
+- 提醒：若以后再出现"只有自己"，先查 `SELECT COUNT(*) FROM dd.user;` 再查接口，不要先改前端；库被重置时历史账号只能从 `sql/*.sql` 备份恢复。
+
