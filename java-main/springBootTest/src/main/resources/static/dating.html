@@ -1830,8 +1830,10 @@ document.addEventListener('keydown', e => {
 
 /* ---------------- 初始化 ---------------- */
 (async function init() {
-  // 先记住 URL 里的 viewer（来自主站「我的主页」入口），absorbAuthFromUrl 会清理地址栏参数
-  const viewerParam = new URLSearchParams(location.search).get('viewer');
+  // 先记住 URL 里的参数（来自主站「我的主页」入口），absorbAuthFromUrl 会清理鉴权参数
+  const initParams = new URLSearchParams(location.search);
+  const viewerParam = initParams.get('viewer');
+  const viewParam = initParams.get('view');
   const fromHome = absorbAuthFromUrl();
   loadAuth();
   renderLoginTip();
@@ -1847,6 +1849,9 @@ document.addEventListener('keydown', e => {
 
   load();
   refreshUnread();
+
+  // ?view=square 可直接打开作品广场，方便分享/刷新后仍停留在广场
+  if (viewParam === 'square' && !viewerParam) switchView('square');
 
   // 指定了 viewer（或从主站带着登录态进来）：直接落到对应主页
   if (viewerParam) {

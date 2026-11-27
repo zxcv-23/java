@@ -435,4 +435,26 @@ adminJwtInterceptor   → /api/manage/**, /api/admin/**
 - 追加根因（用户仍看不到新注册账号）：`static/dating.html` 的「去登录」「去注册」「buildLoginLink()」三处仍写 `http://192.168.68.22:5173/`（已不可达），点进去根本到不了注册页；已统一改 `http://localhost:5173/` 并重启后端验证返回页中 3 处均为新地址。
 - 另一个坑：`guiniang-huajia-vue/guinhuajia-Vue.html` 是纯演示页，原注册/登录只 `setTimeout` 假装成功、不写库；已改为真实调用 8081 接口（详见前端 AI-NOTES）。用该页注册过的账号不会出现在姻缘阁。
 
+## 2026-11-27：作品广场 0 件作品（作品"消失"）
+- 现象：截图显示「全站公开作品 0 件 / 广场上还没有作品」，`GET /api/dating/works` 返回 `data: []`。
+- 根因：**不是接口 bug，也不是 visible 过滤**。数据库被重置为不含姻缘阁数据的旧快照，`dd.dating_work` / `dating_work_media` 均为 0 行；`uploads/` 里的 `work_1_*.jpg`、`work_2_*.jpg`、`video_*.mp4` 还在（媒体文件不在库里，所以"图还在、作品没了"）。binlog 与 `sql/backup/*.sql` 都没有作品标题/文案，无法逐字还原。
+- 恢复：`sql/backup/dating_works_recovered_20261127.sql`（幂等，固定 id 1/2 + 4 条媒体）按残留文件重建 2 件作品；恢复前全库备份在 `sql/backup/dd_before_works_recovery_20261127.sql`。原 BGM 无法考证，选了内置曲库《夏日午后》。
+- 防复发：`schema.sql` 增加 `dating_work` / `dating_work_media` 的 `CREATE TABLE IF NOT EXISTS`，`data.sql` 增加同样两条作品的 `INSERT IGNORE` 种子。应用启动时先建表再灌种子，数据库再被重置也会自动恢复；用户新发布的作品（不同 id）不会被覆盖。**若确实要清空种子作品，删掉 data.sql 那一段，别只删数据库行。**
+- 作者归属：文件名 `work_<userId>_*` 表明两张 `work_1_*` + 视频属于 user 1，`work_2_*` 属于 user 2；当前库只剩 user 1（hh），所以第二件作品显示「已注销用户」。
+- 改完 `schema.sql` / `data.sql` 必须重新打包 jar 并重启 8081（脚本在 classpath 里，旧 jar 不生效）。
+
+## 2026-11-27 续：用户账号"被注销" / 历史用户消失
+- 现象：作品广场里作者显示「已注销用户」，姻缘阁嘉宾列表只剩 1 人。用户以为账号被系统注销。
+- 根因：同样是**数据库被重置为旧快照**，不是登录/鉴权 bug。`dd.user` 被清空，`dating_work.user_id` 找不到对应用户时，`DatingService#toWorkVOs` 会把作者名降级成「已注销用户」；`/api/dating/candidates` 只查 `status=1`，所以嘉宾数变少。
+- 恢复：`sql/backup/users_restored_20261127.sql` 汇总所有历史上出现过的账号（hh / probe_ai_01 / ff / fff / zhangsan），来源包括两份 user 备份、`sql/dd.sql`、git 历史旧 dump 和当前库。`INSERT IGNORE` + 固定 id：
+  - 1=hh（当前账号，保留原密码）
+  - 2=probe_ai_01（作品 2 原作者，保留 id 让作品归属正确）
+  - 3=ff（取 2026-11-26 备份里最新的 BCrypt 密码）
+  - 4=fff（来自 dd.sql）
+  - 5=zhangsan（git 历史旧账号）
+- 恢复前备份：`sql/backup/user_before_restore_all_20261127.sql`（当时只有 hh + probe_ai_01）。
+- 防复发：`data.sql` 的账号种子改为全量 5 个，`status=1`。已实测：手工 `DELETE FROM user` 后重启 8081，5 个账号和 2 件作品全部自动回来；`/api/dating/candidates` 返回 5 人。
+- 注意：历史账号的密码哈希来自旧备份/旧 dump，**明文密码未在代码或备份中保存**。如果用户不记得原密码，需要在个人中心改密或由管理员协助重置；不要猜测 hash 对应的明文。
+- 区分：测试账号 `wb_verify_*` 是历次端到端验证后主动删除的，不属于"被重置弄丢"的用户，未恢复。
+
 

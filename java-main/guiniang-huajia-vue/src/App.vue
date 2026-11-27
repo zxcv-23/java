@@ -42,12 +42,43 @@ function readStoredAdmin() {
   }
 }
 
+// ---------- 姻缘阁「去登录」回跳 ----------
+// dating.html 与本站不同源，登录态只能靠 URL 参数带过去。
+// 这里只接受本机后端托管的 dating.html，避免把 token 带到任意外站（开放重定向）。
+let partnerRedirect = null
+function readPartnerRedirect() {
+  const raw = new URLSearchParams(window.location.search).get('redirect')
+  if (!raw) return null
+  try {
+    const u = new URL(raw, window.location.href)
+    const allowed = ['http://localhost:8081', 'http://127.0.0.1:8081']
+    if (allowed.includes(u.origin) && /^\/dating\.html$/.test(u.pathname)) return u
+  } catch (e) { /* 非法地址直接忽略 */ }
+  return null
+}
+
+function carryAuthToDating() {
+  const target = partnerRedirect
+  const u = currentUser.value
+  if (!target || !u || !u.token) return false
+  target.searchParams.set('from', 'home')
+  target.searchParams.set('token', u.token)
+  target.searchParams.set('uid', String(u.id || ''))
+  if (u.nickname) target.searchParams.set('name', u.nickname)
+  if (u.avatar) target.searchParams.set('avatar', u.avatar)
+  partnerRedirect = null
+  window.location.assign(target.toString())
+  return true
+}
+
 // 已登录则直接进入首页（刷新不丢会话）
 onMounted(() => {
+  partnerRedirect = readPartnerRedirect()
   const u = readStoredUser()
   if (u) {
     currentUser.value = u
-    mode.value = 'home'
+    // 已经登录又从姻缘阁点「去登录」过来：直接带着登录态回去
+    if (!carryAuthToDating()) mode.value = 'home'
   }
   window.addEventListener(ADMIN_UNAUTHORIZED_EVENT, onAdminUnauthorized)
 })
@@ -135,6 +166,8 @@ function goHome() {
   currentUser.value = readStoredUser()
   clearTimeout(homeTimer)
   homeTimer = setTimeout(() => {
+    // 从姻缘阁「去登录」过来的：登录成功后带着 token 回到作品广场
+    if (carryAuthToDating()) return
     // 若是从「个人中心」/「备忘录」被引导来登录的，登录后直接回目标页
     if (pendingProfile && currentUser.value && currentUser.value.token) {
       pendingProfile = false

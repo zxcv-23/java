@@ -169,3 +169,12 @@ src/components/MyGames.vue   ← 外壳：列表 / 详情 / 开玩 三段状态�
 - 该页用 CDN 版 Vue，必须通过 `localhost:5173/guinhuajia-Vue.html` 打开；直接 `file://` 打开会因 CORS 失败（提示语已写明）。
 - 另：后端 `static/dating.html` 的「去登录 / 去注册 / buildLoginLink」三处旧 `192.168.68.22:5173` 已改成 `http://localhost:5173/`，改后必须重启后端（静态资源有缓存）。
 
+## 2026-11-27：姻缘阁「去登录」回跳链路补齐
+- 现象：在 `dating.html` 点「去登录」到主站，登录完只回主站首页；姻缘阁里依然显示未登录横幅，用户以为"登录了却看不到自己的作品"。
+- 旧链路缺口：`dating.html#buildLoginLink()` 会带 `?redirect=http://localhost:8081/dating.html`，但主站 `App.vue` 从来没读过 `redirect` 参数。
+- 修复（`src/App.vue`）：
+  - `readPartnerRedirect()` 只接受 `http://localhost:8081/dating.html` / `http://127.0.0.1:8081/dating.html`，防开放重定向；
+  - `carryAuthToDating()` 用 `URLSearchParams` 把 `token/uid/name/avatar` 拼到目标 URL（和 `HomePage.openPartnerSite()` 同一套约定），再由 `dating.html#absorbAuthFromUrl()` 写入 `dating_auth_v1` 并抹掉地址栏参数；
+  - `onMounted`（已有会话）与 `goHome()`（刚登录）都会尝试回跳，成功后不再停留在主站。
+- 注意：`loginLink` 是 `target="_blank"`，回跳发生在新标签页；原姻缘阁标签页需要刷新才会读到新的 `dating_auth_v1`（或让用户关掉旧标签）。
+

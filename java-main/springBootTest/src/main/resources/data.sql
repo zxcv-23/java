@@ -42,6 +42,65 @@ INSERT IGNORE INTO `item` (`id`, `category_id`, `title`, `description`, `emoji`,
   (17, 3,  '红妆合集',       '红妆阁珍藏，件件皆是心头好。',           '🌹', '红妆',   '红妆合集收尽胭脂钗环、嫁衣镜奁，一览红妆阁之盛，待新人逐件拣选。',     '红妆阁',   1),
   (18, 2,  '花轿信使录',     '信使奔走阴阳，递送相思。',               '📜', '花轿',   '花轿信使录记往来阴阳之传书与请柬，纵隔幽明，亦可互通款曲、再缔良约。',   '花轿信使', 1);
 
+-- ============================================================
+-- 历史用户账号自愈种子
+-- ------------------------------------------------------------
+-- 数据库被重置为旧快照时，user 表会丢失历史账号，作品作者也会变成「已注销用户」。
+-- 来源：sql/backup/users_restored_20261127.sql（ff / probe_ai_01 / fff / zhangsan / hh）。
+-- INSERT IGNORE + 固定 id，不会覆盖已存在账号；密码来自历史备份，登录后请自行修改。
+-- ============================================================
+INSERT IGNORE INTO `user`
+  (`id`, `username`, `password`, `nickname`, `avatar`, `email`, `phone`, `gender`,
+   `bio`, `token_version`, `status`, `create_time`, `update_time`, `deleted`)
+VALUES
+  (1, 'hh', '$2a$10$n9XqAfBbHSNsU.5b6o2X2eSn5WI1yCF/Std80hcgykUvxQQT7u1ce',
+   'hh', NULL, NULL, NULL, 0, NULL, 0, 1,
+   '2026-11-27 13:57:55', '2026-11-27 13:57:55', 0),
+  (2, 'probe_ai_01', '$2a$10$bzahpjhBihUnDSANa5Zs2um6cNTDXDLzS8mbVijDnuuJo0oHQcF1S',
+   'probe_ai_01', NULL, NULL, NULL, 1, NULL, 0, 1,
+   '2026-11-02 08:51:33', '2026-11-02 08:51:33', 0),
+  (3, 'ff', '$2a$10$GA7CGY512Tqbf1xsFCbNReuKNJ6FtKPR2wgB72ge9TqujhkxBwLSm',
+   'ff', NULL, NULL, NULL, 0, NULL, 0, 1,
+   '2026-11-26 14:03:45', '2026-11-26 14:03:45', 0),
+  (4, 'fff', '$2a$10$i88SxblF7/5se1l5x0HBbOo3WVV6HgamUw2DoSwcc8K/wTRDlWDaO',
+   'fff', NULL, NULL, NULL, 0, NULL, 0, 1,
+   '2026-11-11 16:11:21', '2026-11-11 16:11:21', 0),
+  (5, 'zhangsan', '$2a$10$MKEQzV7JBJ5cJspJw.MA8OlJCKF9bE6Bj3fmV/4.dPvVHcxGgINki',
+   'zhangsan', NULL, NULL, NULL, 1, NULL, 0, 1,
+   '2026-10-09 14:50:51', '2026-10-09 14:50:51', 0);
+
+-- ============================================================
+-- 姻缘阁作品广场 · 已发布作品的自愈种子
+-- ------------------------------------------------------------
+-- 背景：数据库被重置为不含姻缘阁数据的旧快照时，uploads/ 中的媒体文件还在，
+--       但 dating_work / dating_work_media 被清空，广场显示 0 件作品。
+-- 策略：INSERT IGNORE + 固定主键，每次启动幂等补种，不覆盖用户后来发布的新作品。
+--       若确实要清空种子作品，删除本段即可（不要删数据行，否则下次启动会补回）。
+-- 备注：原作品的标题/文案/BGM 未进入旧备份，以下按残留图片重建，可删除后重新发布替换。
+-- ============================================================
+INSERT IGNORE INTO `dating_work`
+  (`id`, `user_id`, `title`, `content`, `cover`, `bgm_url`, `bgm_name`,
+   `like_count`, `comment_count`, `view_count`, `visible`, `create_time`, `update_time`)
+VALUES
+  (1, 1, '可爱瞬间',
+   '粉色小兔、猫猫头套，还有一段随手拍的小视频。把最近的可爱留在这里啦。',
+   '/uploads/work_1_2efac931191340c6ada41d91f0755ac5.jpg',
+   '/bgm/summer-noon.wav', '夏日午后',
+   0, 0, 0, 1, '2026-11-26 20:10:00', '2026-11-26 20:10:00'),
+  (2, 2, '窗边的她',
+   '一张很喜欢的插画，分享给也喜欢安静的人。',
+   '/uploads/work_2_eded9b4cf9c34d24a9b130c315d27560.jpg',
+   NULL, NULL,
+   0, 0, 0, 1, '2026-11-25 19:30:00', '2026-11-25 19:30:00');
+
+INSERT IGNORE INTO `dating_work_media`
+  (`id`, `work_id`, `media_type`, `url`, `sort_order`)
+VALUES
+  (1, 1, 'image', '/uploads/work_1_2efac931191340c6ada41d91f0755ac5.jpg', 0),
+  (2, 1, 'image', '/uploads/work_1_f37ea41b19a3401cbb9f2a27e215e867.jpg', 1),
+  (3, 1, 'video', '/uploads/video_1c6b1750973f4164800176643e6adf2f.mp4', 2),
+  (4, 2, 'image', '/uploads/work_2_eded9b4cf9c34d24a9b130c315d27560.jpg', 0);
+
 -- ---------- 首页轮播标语 / 主题横幅（驱动前端高级动态主题） ----------
 INSERT IGNORE INTO `banner` (`id`, `title`, `subtitle`, `tag`, `accent`, `sort`, `status`) VALUES
   (1, '月夜为媒，红妆为信',     '以三生石上旧精魂，许你一段不灭姻缘。',   '上元灯会', '#E84A78', 1, 1),

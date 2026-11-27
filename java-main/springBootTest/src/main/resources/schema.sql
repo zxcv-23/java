@@ -157,3 +157,43 @@ CREATE TABLE IF NOT EXISTS `memo` (
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_general_ci
   COMMENT='用户备忘录（按登录用户隔离）';
+
+-- ============================================================
+-- 姻缘阁作品广场（作品主表 / 媒体表）
+-- 说明：SchemaMigration#ensureDatingTables 也会幂等建这两张表。
+--       这里提前建一次，是为了让 data.sql 中的作品恢复数据能在
+--       「数据库被重置成旧快照」后随应用启动自动补回广场作品。
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `dating_work` (
+  `id`           BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id`      BIGINT       NOT NULL                COMMENT '作者用户ID',
+  `title`        VARCHAR(80)  NOT NULL                COMMENT '作品标题',
+  `content`      VARCHAR(1000) DEFAULT NULL           COMMENT '作品文案',
+  `cover`        VARCHAR(255) DEFAULT NULL            COMMENT '封面地址',
+  `bgm_url`      VARCHAR(500) DEFAULT NULL            COMMENT 'BGM地址',
+  `bgm_name`     VARCHAR(100) DEFAULT NULL            COMMENT 'BGM名称',
+  `like_count`   INT          NOT NULL DEFAULT 0      COMMENT '点赞数',
+  `comment_count` INT         NOT NULL DEFAULT 0      COMMENT '留言数',
+  `view_count`   INT          NOT NULL DEFAULT 0      COMMENT '浏览数',
+  `visible`      TINYINT      NOT NULL DEFAULT 1      COMMENT '1公开 0仅自己可见',
+  `create_time`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_dating_work_user` (`user_id`,`id`)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_general_ci
+  COMMENT='姻缘阁作品';
+
+CREATE TABLE IF NOT EXISTS `dating_work_media` (
+  `id`         BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `work_id`    BIGINT       NOT NULL                COMMENT '作品ID',
+  `media_type` VARCHAR(16)  NOT NULL DEFAULT 'image' COMMENT 'image/video',
+  `url`        VARCHAR(500) NOT NULL                COMMENT '访问地址',
+  `sort_order` INT          NOT NULL DEFAULT 0      COMMENT '顺序',
+  PRIMARY KEY (`id`),
+  KEY `idx_dating_media_work` (`work_id`,`sort_order`)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_general_ci
+  COMMENT='姻缘阁作品媒体';
